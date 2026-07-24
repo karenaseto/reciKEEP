@@ -156,7 +156,11 @@ els.emailAuthForm.addEventListener("submit", async (e) => {
 
   try {
     if (authMode === "signup") {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.href.split("?")[0].split("#")[0] },
+      });
       if (error) {
         els.emailAuthError.textContent = error.message;
       } else if (!data.session) {
