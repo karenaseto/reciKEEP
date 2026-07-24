@@ -15,6 +15,7 @@ A frontend-first recipe organizer for links you find on Instagram Reels, TikTok,
 - Add Recipe flow: paste a link, hit "Fetch recipe" to auto-fill real details:
   - **Recipe websites** — real title + photo, read from the page's Recipe structured data or Open Graph tags
   - **TikTok** — real caption + thumbnail, read via TikTok's public oEmbed API. The caption auto-fills Notes since it's genuine recipe content (ingredients/steps creators put in the caption), not filler text.
+  - **YouTube** — real title + thumbnail, read via YouTube's public oEmbed API (falls back to YouTube's predictable thumbnail URL pattern if oEmbed doesn't return one)
   - **Instagram Reels** — placeholder only; see note below on why
 - Search bar and source-type filter layered on top of the current sidebar selection
 - Favorite toggle per recipe
@@ -56,6 +57,7 @@ This starts a server at `http://localhost:8787`. If you do this, update `RECIPE_
 - **Google OAuth**: the Google Cloud OAuth client is in "Production" publishing status with only the default non-sensitive scopes (email/profile/openid), so no Google app-review process was needed — any Google account can sign in.
 - **Recipe websites**: the backend fetches the page server-side (to avoid a browser CORS restriction that blocks this from working in `app.js` directly) and reads whichever of these the page already publishes — Recipe structured data (JSON-LD) if present, otherwise Open Graph title/image tags, otherwise the page `<title>`. It does not scrape ingredients/steps yet.
 - **TikTok**: uses TikTok's own public, unauthenticated oEmbed endpoint (`tiktok.com/oembed`) to get the real caption and thumbnail — this is a documented, stable API, not scraping.
+- **YouTube**: uses YouTube's own public, unauthenticated oEmbed endpoint (`youtube.com/oembed`) for the real title/thumbnail, with a fallback to constructing the thumbnail URL directly from the video ID (`img.youtube.com/vi/{id}/hqdefault.jpg`) if oEmbed doesn't return one.
 - **Instagram Reels are still a placeholder.** Instagram's public oEmbed was discontinued years ago; the current version requires a Meta Developer app that's been through App Review with specific permissions (a business-verification process, not just an API key), and even then typically only covers content the app owner manages — not arbitrary public Reels. Scraping Instagram's HTML instead is unreliable (non-logged-in requests get served a login wall) and against their Terms of Service, so this app doesn't attempt it.
 - Some recipe sites (e.g. allrecipes.com, simplyrecipes.com) block requests from cloud-hosting IP addresses as an anti-bot measure, so fetching those specific sites from the deployed backend will fail and fall back to a placeholder — that's the site blocking the server, not a bug. Most independent recipe blogs and many larger sites work fine (tested working: food.com, loveandlemons.com).
 - The recipe-reader backend is on Render's **free tier**, which spins down after 15 minutes of inactivity. The first "Fetch recipe" request after idle time can take 30–50 seconds while it wakes back up — later requests are fast. This is expected, not broken.
