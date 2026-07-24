@@ -1048,6 +1048,22 @@ els.fetchButton.addEventListener("click", async () => {
           "Couldn't read that video automatically — filled in a placeholder instead. (Is the reader server running?)";
         els.fetchStatus.className = "fetch-status is-error";
       }
+    } else if (sourceType === "YouTube") {
+      try {
+        const real = await readRealRecipe(url);
+        result = {
+          title: real.title || `YouTube video from ${real.host || "this link"}`,
+          sourceType: "YouTube",
+          image: real.image || fallbackImage("YouTube"),
+        };
+        els.fetchStatus.textContent = "Found the title and thumbnail!";
+        els.fetchStatus.className = "fetch-status is-success";
+      } catch {
+        result = await placeholderRecipe(url);
+        els.fetchStatus.textContent =
+          "Couldn't read that video automatically — filled in a placeholder instead. (Is the reader server running?)";
+        els.fetchStatus.className = "fetch-status is-error";
+      }
     } else {
       result = await placeholderRecipe(url);
       els.fetchStatus.textContent =

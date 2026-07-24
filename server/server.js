@@ -97,6 +97,39 @@ async function fetchTikTokOEmbed(targetUrl, signal) {
   };
 }
 
+function isYouTubeUrl(hostname) {
+  return /(^|\.)youtube\.com$/i.test(hostname) || /(^|\.)youtu\.be$/i.test(hostname);
+}
+
+function extractYouTubeVideoId(parsedUrl) {
+  const host = parsedUrl.hostname.replace(/^www\./, "");
+  if (host === "youtu.be") {
+    return parsedUrl.pathname.split("/").filter(Boolean)[0] || "";
+  }
+  const vParam = parsedUrl.searchParams.get("v");
+  if (vParam) return vParam;
+  const match = parsedUrl.pathname.match(/\/(shorts|embed|live)\/([^/?]+)/);
+  return match ? match[2] : "";
+}
+
+async function fetchYouTubeOEmbed(targetUrl, videoId, signal) {
+  const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(targetUrl)}&format=json`;
+  const response = await fetch(endpoint, { signal });
+
+  if (!response.ok) {
+    throw Object.assign(new Error("YouTube couldn't find that video."), { status: 404 });
+  }
+
+  const data = await response.json();
+  const fallbackImage = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : "";
+
+  return {
+    title: data.title || "YouTube video",
+    image: data.thumbnail_url || fallbackImage,
+    host: "youtube.com",
+  };
+}
+
 const app = express();
 app.use(cors());
 
@@ -132,6 +165,21 @@ app.get("/api/parse-recipe", async (req, res) => {
         return res.status(504).json({ error: "TikTok took too long to respond." });
       }
       return res.status(err.status || 502).json({ error: err.message || "Couldn't read that TikTok video." });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  if (isYouTubeUrl(parsedUrl.hostname)) {
+    try {
+      const videoId = extractYouTubeVideoId(parsedUrl);
+      const result = await fetchYouTubeOEmbed(parsedUrl.toString(), videoId, controller.signal);
+      return res.json(result);
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return res.status(504).json({ error: "YouTube took too long to respond." });
+      }
+      return res.status(err.status || 502).json({ error: err.message || "Couldn't read that YouTube video." });
     } finally {
       clearTimeout(timeout);
     }
