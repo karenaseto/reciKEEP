@@ -1,7 +1,7 @@
 import { buildSeedData, PLACEHOLDER_IMAGES } from "./data.js?v=2";
 
 const STORAGE_KEY = "recikeep:v2";
-const RECIPE_READER_ENDPOINT = "http://localhost:8787/api/parse-recipe";
+const RECIPE_READER_ENDPOINT = "https://recikeep-server.onrender.com/api/parse-recipe";
 
 const els = {
   sidebar: document.getElementById("sidebar"),
