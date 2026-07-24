@@ -1,9 +1,23 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PLACEHOLDER_IMAGES } from "./data.js?v=2";
 
-const STORAGE_KEY = "recikeep:v2";
+const SUPABASE_URL = "https://jjipfusddbyltmiofdqr.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqaXBmdXNkZGJ5bHRtaW9mZHFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NjY1MjcsImV4cCI6MjEwMDQ0MjUyN30.HC_G1iI1cBbVRo6usxqvIgsZfq2-wsQU9YUlqbvxRvo";
 const RECIPE_READER_ENDPOINT = "https://recikeep-server.onrender.com/api/parse-recipe";
 
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const els = {
+  authLoading: document.getElementById("authLoading"),
+  signedOutGate: document.getElementById("signedOutGate"),
+  gateSignInButton: document.getElementById("gateSignInButton"),
+  authError: document.getElementById("authError"),
+  appShell: document.getElementById("appShell"),
+  accountAvatar: document.getElementById("accountAvatar"),
+  accountName: document.getElementById("accountName"),
+  signOutButton: document.getElementById("signOutButton"),
+
   sidebar: document.getElementById("sidebar"),
   sidebarToggle: document.getElementById("sidebarToggle"),
   sidebarOverlay: document.getElementById("sidebarOverlay"),
@@ -44,10 +58,12 @@ const els = {
   formError: document.getElementById("formError"),
   deleteRecipeButton: document.getElementById("deleteRecipeButton"),
   cancelDialogButton: document.getElementById("cancelDialogButton"),
+  saveRecipeButton: document.getElementById("saveRecipeButton"),
   recipeCardTemplate: document.getElementById("recipeCardTemplate"),
 };
 
-let state = loadState();
+let currentUser = null;
+let state = { categories: [], subcategories: [], recipes: [] };
 
 const ui = {
   scope: { type: "all" },
@@ -57,40 +73,272 @@ const ui = {
   editingRecipeId: null,
 };
 
-function uid() {
-  return crypto.randomUUID();
+// ---------- auth ----------
+
+function showAuthError(message) {
+  els.authError.textContent = message;
+  els.authError.classList.remove("hidden");
+  setTimeout(() => els.authError.classList.add("hidden"), 5000);
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.categories) && Array.isArray(parsed.recipes)) {
-        return {
-          categories: parsed.categories,
-          subcategories: parsed.subcategories || [],
-          recipes: parsed.recipes,
-        };
-      }
-    }
-  } catch (err) {
-    console.warn("Could not read saved data, starting fresh.", err);
+function showApp() {
+  els.authLoading.classList.add("hidden");
+  els.signedOutGate.classList.add("hidden");
+  els.appShell.classList.remove("hidden");
+}
+
+function showSignedOut() {
+  els.authLoading.classList.add("hidden");
+  els.appShell.classList.add("hidden");
+  els.signedOutGate.classList.remove("hidden");
+}
+
+function renderAccount() {
+  if (!currentUser) return;
+  const meta = currentUser.user_metadata || {};
+  const avatarUrl = meta.avatar_url || meta.picture || "";
+  els.accountAvatar.src = avatarUrl;
+  els.accountAvatar.style.visibility = avatarUrl ? "visible" : "hidden";
+  els.accountName.textContent = meta.full_name || meta.name || currentUser.email || "Account";
+}
+
+els.gateSignInButton.addEventListener("click", async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.href.split("?")[0].split("#")[0] },
+  });
+  if (error) showAuthError(error.message);
+});
+
+els.signOutButton.addEventListener("click", async () => {
+  await supabase.auth.signOut();
+});
+
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  currentUser = session?.user || null;
+  if (currentUser) {
+    renderAccount();
+    ui.scope = { type: "all" };
+    ui.search = "";
+    ui.source = "all";
+    ui.expanded = new Set();
+    els.searchInput.value = "";
+    els.sourceFilter.value = "all";
+    await loadAllData();
+    showApp();
+    renderAll();
+  } else {
+    state = { categories: [], subcategories: [], recipes: [] };
+    showSignedOut();
   }
-  const empty = { categories: [], subcategories: [], recipes: [] };
-  persist(empty);
-  return empty;
+});
+
+// ---------- Supabase <-> app state mapping ----------
+
+function rowToCategory(row) {
+  return { id: row.id, name: row.name, createdAt: row.created_at };
 }
 
-function persist(next = state) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      categories: next.categories,
-      subcategories: next.subcategories,
-      recipes: next.recipes,
+function rowToSubcategory(row) {
+  return { id: row.id, name: row.name, categoryId: row.category_id, createdAt: row.created_at };
+}
+
+function rowToRecipe(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    url: row.url,
+    sourceType: row.source_type,
+    categoryId: row.category_id || "",
+    subcategoryId: row.subcategory_id || "",
+    image: row.image || "",
+    tag: row.tag || "",
+    notes: row.notes || "",
+    favorite: row.favorite,
+    createdAt: row.created_at,
+  };
+}
+
+async function loadAllData() {
+  const [catRes, subRes, recRes] = await Promise.all([
+    supabase.from("categories").select("*").order("created_at", { ascending: true }),
+    supabase.from("subcategories").select("*").order("created_at", { ascending: true }),
+    supabase.from("recipes").select("*").order("created_at", { ascending: true }),
+  ]);
+
+  const firstError = catRes.error || subRes.error || recRes.error;
+  if (firstError) showAuthError(firstError.message);
+
+  state = {
+    categories: (catRes.data || []).map(rowToCategory),
+    subcategories: (subRes.data || []).map(rowToSubcategory),
+    recipes: (recRes.data || []).map(rowToRecipe),
+  };
+}
+
+// ---------- mutations (Supabase-backed) ----------
+
+async function createCategory(name) {
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({ name, user_id: currentUser.id })
+    .select()
+    .single();
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+  state.categories.push(rowToCategory(data));
+  renderSidebar();
+}
+
+async function renameCategory(category, newName) {
+  const { error } = await supabase.from("categories").update({ name: newName }).eq("id", category.id);
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+  category.name = newName;
+  renderSidebar();
+  renderTopbar();
+}
+
+async function removeCategory(category) {
+  const { error } = await supabase.from("categories").delete().eq("id", category.id);
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+
+  const subIds = new Set(subcategoriesFor(category.id).map((s) => s.id));
+  state.subcategories = state.subcategories.filter((s) => s.categoryId !== category.id);
+  state.recipes.forEach((r) => {
+    if (r.categoryId === category.id) {
+      r.categoryId = "";
+      r.subcategoryId = "";
+    }
+    if (subIds.has(r.subcategoryId)) r.subcategoryId = "";
+  });
+  state.categories = state.categories.filter((c) => c.id !== category.id);
+
+  if (ui.scope.type === "category" && ui.scope.id === category.id) ui.scope = { type: "all" };
+  if (ui.scope.type === "subcategory" && subIds.has(ui.scope.id)) ui.scope = { type: "all" };
+
+  renderAll();
+}
+
+async function createSubcategory(categoryId, name) {
+  const { data, error } = await supabase
+    .from("subcategories")
+    .insert({ name, category_id: categoryId, user_id: currentUser.id })
+    .select()
+    .single();
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+  state.subcategories.push(rowToSubcategory(data));
+  renderSidebar();
+}
+
+async function renameSubcategory(sub, newName) {
+  const { error } = await supabase.from("subcategories").update({ name: newName }).eq("id", sub.id);
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+  sub.name = newName;
+  renderSidebar();
+  renderTopbar();
+}
+
+async function removeSubcategory(sub) {
+  const { error } = await supabase.from("subcategories").delete().eq("id", sub.id);
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+  state.recipes.forEach((r) => {
+    if (r.subcategoryId === sub.id) r.subcategoryId = "";
+  });
+  state.subcategories = state.subcategories.filter((s) => s.id !== sub.id);
+
+  if (ui.scope.type === "subcategory" && ui.scope.id === sub.id) ui.scope = { type: "all" };
+
+  renderAll();
+}
+
+async function createRecipe(payload) {
+  const { data, error } = await supabase
+    .from("recipes")
+    .insert({
+      user_id: currentUser.id,
+      title: payload.title,
+      url: payload.url,
+      source_type: payload.sourceType,
+      category_id: payload.categoryId || null,
+      subcategory_id: payload.subcategoryId || null,
+      image: payload.image,
+      tag: payload.tag,
+      notes: payload.notes,
+      favorite: payload.favorite,
     })
-  );
+    .select()
+    .single();
+  if (error) {
+    els.formError.textContent = error.message;
+    return false;
+  }
+  state.recipes.push(rowToRecipe(data));
+  return true;
+}
+
+async function updateRecipe(id, payload) {
+  const { error } = await supabase
+    .from("recipes")
+    .update({
+      title: payload.title,
+      url: payload.url,
+      source_type: payload.sourceType,
+      category_id: payload.categoryId || null,
+      subcategory_id: payload.subcategoryId || null,
+      image: payload.image,
+      tag: payload.tag,
+      notes: payload.notes,
+      favorite: payload.favorite,
+    })
+    .eq("id", id);
+  if (error) {
+    els.formError.textContent = error.message;
+    return false;
+  }
+  const recipe = state.recipes.find((r) => r.id === id);
+  Object.assign(recipe, payload);
+  return true;
+}
+
+async function removeRecipe(id) {
+  const { error } = await supabase.from("recipes").delete().eq("id", id);
+  if (error) {
+    showAuthError(error.message);
+    return;
+  }
+  state.recipes = state.recipes.filter((r) => r.id !== id);
+}
+
+async function toggleFavorite(recipe) {
+  const next = !recipe.favorite;
+  recipe.favorite = next;
+  renderSidebar();
+  renderGrid();
+
+  const { error } = await supabase.from("recipes").update({ favorite: next }).eq("id", recipe.id);
+  if (error) {
+    recipe.favorite = !next;
+    renderSidebar();
+    renderGrid();
+    showAuthError(error.message);
+  }
 }
 
 // ---------- derived lookups ----------
@@ -319,11 +567,10 @@ function startCategoryRename(category, nameSpan, container) {
   const commit = () => {
     const value = input.value.trim();
     if (value && value !== category.name) {
-      category.name = value;
-      persist();
+      renameCategory(category, value);
+    } else {
+      renderSidebar();
     }
-    renderSidebar();
-    renderTopbar();
   };
 
   input.addEventListener("keydown", (e) => {
@@ -349,11 +596,10 @@ function startSubcategoryRename(sub, nameSpan, container) {
   const commit = () => {
     const value = input.value.trim();
     if (value && value !== sub.name) {
-      sub.name = value;
-      persist();
+      renameSubcategory(sub, value);
+    } else {
+      renderSidebar();
     }
-    renderSidebar();
-    renderTopbar();
   };
 
   input.addEventListener("keydown", (e) => {
@@ -385,15 +631,10 @@ function startInlineSubcategoryCreate(categoryId) {
   const commit = () => {
     const value = input.value.trim();
     if (value) {
-      state.subcategories.push({
-        id: uid(),
-        name: value,
-        categoryId,
-        createdAt: new Date().toISOString(),
-      });
-      persist();
+      createSubcategory(categoryId, value);
+    } else {
+      renderSidebar();
     }
-    renderSidebar();
   };
 
   input.addEventListener("keydown", (e) => {
@@ -420,10 +661,10 @@ els.addCategoryButton.addEventListener("click", () => {
   const commit = () => {
     const value = input.value.trim();
     if (value) {
-      state.categories.push({ id: uid(), name: value, createdAt: new Date().toISOString() });
-      persist();
+      createCategory(value);
+    } else {
+      renderSidebar();
     }
-    renderSidebar();
   };
 
   input.addEventListener("keydown", (e) => {
@@ -444,23 +685,7 @@ function deleteCategory(category) {
       ? `"${category.name}" has ${affected} recipe(s) and ${subs.length} subcategory(ies). Deleting it will move those recipes to Uncategorized. Continue?`
       : `Delete "${category.name}"?`;
   if (!window.confirm(warning)) return;
-
-  const subIds = new Set(subs.map((s) => s.id));
-  state.subcategories = state.subcategories.filter((s) => s.categoryId !== category.id);
-  state.recipes.forEach((r) => {
-    if (r.categoryId === category.id) {
-      r.categoryId = "";
-      r.subcategoryId = "";
-    }
-    if (subIds.has(r.subcategoryId)) r.subcategoryId = "";
-  });
-  state.categories = state.categories.filter((c) => c.id !== category.id);
-
-  if (ui.scope.type === "category" && ui.scope.id === category.id) ui.scope = { type: "all" };
-  if (ui.scope.type === "subcategory" && subIds.has(ui.scope.id)) ui.scope = { type: "all" };
-
-  persist();
-  renderAll();
+  removeCategory(category);
 }
 
 function deleteSubcategory(sub) {
@@ -469,16 +694,7 @@ function deleteSubcategory(sub) {
     ? `"${sub.name}" has ${affected} recipe(s). Deleting it will keep those recipes in the main category, just without this subcategory. Continue?`
     : `Delete "${sub.name}"?`;
   if (!window.confirm(warning)) return;
-
-  state.recipes.forEach((r) => {
-    if (r.subcategoryId === sub.id) r.subcategoryId = "";
-  });
-  state.subcategories = state.subcategories.filter((s) => s.id !== sub.id);
-
-  if (ui.scope.type === "subcategory" && ui.scope.id === sub.id) ui.scope = { type: "all" };
-
-  persist();
-  renderAll();
+  removeSubcategory(sub);
 }
 
 // ---------- rendering: topbar + grid ----------
@@ -530,12 +746,7 @@ function buildRecipeCard(recipe) {
 
   const favBtn = node.querySelector(".favorite-chip");
   favBtn.classList.toggle("is-favorite", !!recipe.favorite);
-  favBtn.addEventListener("click", () => {
-    recipe.favorite = !recipe.favorite;
-    persist();
-    renderSidebar();
-    renderGrid();
-  });
+  favBtn.addEventListener("click", () => toggleFavorite(recipe));
 
   const category = getCategory(recipe.categoryId);
   const subcategory = getSubcategory(recipe.subcategoryId);
@@ -782,7 +993,7 @@ els.manualEntryLink.addEventListener("click", () => {
   els.titleInput.focus();
 });
 
-els.recipeForm.addEventListener("submit", (e) => {
+els.recipeForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const title = els.titleInput.value.trim();
   const url = els.urlInput.value.trim();
@@ -804,27 +1015,22 @@ els.recipeForm.addEventListener("submit", (e) => {
     favorite: els.favoriteInput.checked,
   };
 
-  if (ui.editingRecipeId) {
-    const recipe = state.recipes.find((r) => r.id === ui.editingRecipeId);
-    Object.assign(recipe, payload);
-  } else {
-    state.recipes.push({
-      id: uid(),
-      createdAt: new Date().toISOString(),
-      ...payload,
-    });
-  }
+  els.saveRecipeButton?.setAttribute("disabled", "true");
+  const ok = ui.editingRecipeId
+    ? await updateRecipe(ui.editingRecipeId, payload)
+    : await createRecipe(payload);
+  els.saveRecipeButton?.removeAttribute("disabled");
 
-  persist();
+  if (!ok) return;
+
   closeRecipeDialog();
   renderAll();
 });
 
-els.deleteRecipeButton.addEventListener("click", () => {
+els.deleteRecipeButton.addEventListener("click", async () => {
   if (!ui.editingRecipeId) return;
   if (!window.confirm("Delete this recipe?")) return;
-  state.recipes = state.recipes.filter((r) => r.id !== ui.editingRecipeId);
-  persist();
+  await removeRecipe(ui.editingRecipeId);
   closeRecipeDialog();
   renderAll();
 });
@@ -867,7 +1073,3 @@ els.sidebarToggle.addEventListener("click", () => {
   els.sidebar.classList.contains("is-open") ? closeSidebar() : openSidebar();
 });
 els.sidebarOverlay.addEventListener("click", closeSidebar);
-
-// ---------- init ----------
-
-renderAll();

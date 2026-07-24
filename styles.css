@@ -107,6 +107,107 @@ h3 {
   color: var(--accent-strong);
 }
 
+.account-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.account-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--accent-soft);
+}
+
+.account-name {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  font-size: 3rem;
+}
+
+.signed-out-gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 1.5rem;
+}
+
+.signed-out-card {
+  max-width: 380px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 2.5rem 2rem;
+}
+
+.signed-out-card .logo-mark {
+  font-size: 2.6rem;
+}
+
+.signed-out-card h1 {
+  font-size: 1.8rem;
+  color: var(--accent-strong);
+}
+
+.signed-out-card p {
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.signed-out-card .primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-error {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 1.1rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  max-width: min(90vw, 480px);
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
