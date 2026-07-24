@@ -713,6 +713,7 @@ els.fetchButton.addEventListener("click", async () => {
   els.fetchStatus.className = "fetch-status is-loading";
 
   const sourceType = detectSourceType(url);
+  let notes = null;
 
   try {
     let result;
@@ -735,16 +736,34 @@ els.fetchButton.addEventListener("click", async () => {
           "Couldn't read that page automatically — filled in a placeholder instead. (Is the reader server running?)";
         els.fetchStatus.className = "fetch-status is-error";
       }
+    } else if (sourceType === "TikTok") {
+      try {
+        const real = await readRealRecipe(url);
+        result = {
+          title: real.title || `TikTok video from ${real.host || "this link"}`,
+          sourceType: "TikTok",
+          image: real.image || fallbackImage("TikTok"),
+        };
+        notes = real.description || null;
+        els.fetchStatus.textContent = "Found the caption and photo!";
+        els.fetchStatus.className = "fetch-status is-success";
+      } catch {
+        result = await placeholderRecipe(url);
+        els.fetchStatus.textContent =
+          "Couldn't read that video automatically — filled in a placeholder instead. (Is the reader server running?)";
+        els.fetchStatus.className = "fetch-status is-error";
+      }
     } else {
       result = await placeholderRecipe(url);
       els.fetchStatus.textContent =
-        "Reels and videos can't be auto-read yet — using a placeholder photo.";
+        "Instagram Reels can't be auto-read yet — using a placeholder photo.";
       els.fetchStatus.className = "fetch-status is-success";
     }
 
     els.titleInput.value = result.title;
     els.sourceTypeInput.value = result.sourceType;
     els.imageInput.value = result.image;
+    if (notes) els.notesInput.value = notes;
     els.formFields.disabled = false;
   } catch {
     els.fetchStatus.textContent = "Couldn't read that link. Try again or enter details manually.";

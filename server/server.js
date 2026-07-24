@@ -68,6 +68,35 @@ function firstJsonLdRecipe($) {
   return null;
 }
 
+function isTikTokUrl(hostname) {
+  return /(^|\.)tiktok\.com$/i.test(hostname);
+}
+
+async function fetchTikTokOEmbed(targetUrl, signal) {
+  const endpoint = `https://www.tiktok.com/oembed?url=${encodeURIComponent(targetUrl)}`;
+  const response = await fetch(endpoint, { signal });
+
+  if (!response.ok) {
+    throw Object.assign(new Error("TikTok couldn't find that video."), { status: 404 });
+  }
+
+  const data = await response.json();
+
+  if (!data.thumbnail_url && !data.author_name) {
+    throw Object.assign(new Error("TikTok couldn't find that video."), { status: 404 });
+  }
+
+  const caption = (data.title || "").trim();
+  const shortTitle = caption.split("\n")[0].slice(0, 120);
+
+  return {
+    title: shortTitle || `TikTok video by ${data.author_name || "unknown"}`,
+    description: caption,
+    image: data.thumbnail_url || "",
+    host: "tiktok.com",
+  };
+}
+
 const app = express();
 app.use(cors());
 
@@ -93,6 +122,20 @@ app.get("/api/parse-recipe", async (req, res) => {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  if (isTikTokUrl(parsedUrl.hostname)) {
+    try {
+      const result = await fetchTikTokOEmbed(parsedUrl.toString(), controller.signal);
+      return res.json(result);
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return res.status(504).json({ error: "TikTok took too long to respond." });
+      }
+      return res.status(err.status || 502).json({ error: err.message || "Couldn't read that TikTok video." });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   try {
     const response = await fetch(parsedUrl.toString(), {
