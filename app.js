@@ -90,6 +90,11 @@ const ui = {
   editingRecipeId: null,
 };
 
+let categoryDropdown = null;
+let subcategoryDropdown = null;
+let sourceTypeDropdown = null;
+let sourceFilterDropdown = null;
+
 // ---------- auth ----------
 
 function showAuthError(message) {
@@ -208,6 +213,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     ui.expanded = new Set();
     els.searchInput.value = "";
     els.sourceFilter.value = "all";
+    if (sourceFilterDropdown) sourceFilterDropdown.render();
     await loadAllData();
     showApp();
     renderAll();
@@ -270,10 +276,12 @@ async function createCategory(name) {
     .single();
   if (error) {
     showAuthError(error.message);
-    return;
+    return null;
   }
-  state.categories.push(rowToCategory(data));
+  const category = rowToCategory(data);
+  state.categories.push(category);
   renderSidebar();
+  return category;
 }
 
 async function renameCategory(category, newName) {
@@ -319,10 +327,12 @@ async function createSubcategory(categoryId, name) {
     .single();
   if (error) {
     showAuthError(error.message);
-    return;
+    return null;
   }
-  state.subcategories.push(rowToSubcategory(data));
+  const subcategory = rowToSubcategory(data);
+  state.subcategories.push(subcategory);
   renderSidebar();
+  return subcategory;
 }
 
 async function renameSubcategory(sub, newName) {
@@ -887,6 +897,7 @@ function populateCategorySelect(selectedCategoryId) {
     els.categoryInput.appendChild(opt);
   });
   els.categoryInput.value = selectedCategoryId || "";
+  if (categoryDropdown) categoryDropdown.render();
 }
 
 function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
@@ -903,6 +914,7 @@ function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
     els.subcategoryInput.appendChild(opt);
   });
   els.subcategoryInput.value = selectedSubcategoryId || "";
+  if (subcategoryDropdown) subcategoryDropdown.render();
 }
 
 els.categoryInput.addEventListener("change", () => {
@@ -926,6 +938,7 @@ function openRecipeDialog(mode, recipe) {
     els.fetchButton.disabled = false;
     els.titleInput.value = recipe.title;
     els.sourceTypeInput.value = recipe.sourceType;
+    if (sourceTypeDropdown) sourceTypeDropdown.render();
     populateCategorySelect(recipe.categoryId);
     populateSubcategorySelect(recipe.categoryId, recipe.subcategoryId);
     els.imageInput.value = recipe.image || "";
@@ -938,6 +951,7 @@ function openRecipeDialog(mode, recipe) {
     els.formFields.disabled = true;
     els.urlInput.value = "";
     els.fetchButton.disabled = true;
+    if (sourceTypeDropdown) sourceTypeDropdown.render();
     populateCategorySelect("");
     populateSubcategorySelect("", "");
   }
@@ -974,15 +988,13 @@ function placeholderRecipe(urlString) {
   } catch {
     // leave default
   }
-  const bucket = PLACEHOLDER_IMAGES[sourceType] || PLACEHOLDER_IMAGES.Website;
-  const image = bucket[Math.floor(Math.random() * bucket.length)];
 
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
         title: `Recipe from ${hostLabel}`,
         sourceType,
-        image,
+        image: "",
       });
     }, 500);
   });
@@ -1019,16 +1031,19 @@ els.fetchButton.addEventListener("click", async () => {
         result = {
           title: real.title || `Recipe from ${real.host || "this link"}`,
           sourceType: "Website",
-          image: real.image || fallbackImage("Website"),
+          image: real.image || "",
         };
-        els.fetchStatus.textContent = real.isRecipeSchema
-          ? "Found the recipe details on the page!"
-          : "Found a title and photo on the page.";
+        if (real.isRecipeSchema) {
+          els.fetchStatus.textContent = "Found the recipe details on the page!";
+        } else if (real.image) {
+          els.fetchStatus.textContent = "Found a title and photo on the page.";
+        } else {
+          els.fetchStatus.textContent = "Found a title on the page — no photo detected.";
+        }
         els.fetchStatus.className = "fetch-status is-success";
       } catch {
         result = await placeholderRecipe(url);
-        els.fetchStatus.textContent =
-          "Couldn't read that page automatically — filled in a placeholder instead. (Is the reader server running?)";
+        els.fetchStatus.textContent = "Couldn't read that page automatically. Try again, or fill in the details yourself below.";
         els.fetchStatus.className = "fetch-status is-error";
       }
     } else if (sourceType === "TikTok") {
@@ -1037,15 +1052,16 @@ els.fetchButton.addEventListener("click", async () => {
         result = {
           title: real.title || `TikTok video from ${real.host || "this link"}`,
           sourceType: "TikTok",
-          image: real.image || fallbackImage("TikTok"),
+          image: real.image || "",
         };
         notes = real.description || null;
-        els.fetchStatus.textContent = "Found the caption and photo!";
+        els.fetchStatus.textContent = real.image
+          ? "Found the caption and photo!"
+          : "Found the caption — no photo detected.";
         els.fetchStatus.className = "fetch-status is-success";
       } catch {
         result = await placeholderRecipe(url);
-        els.fetchStatus.textContent =
-          "Couldn't read that video automatically — filled in a placeholder instead. (Is the reader server running?)";
+        els.fetchStatus.textContent = "Couldn't read that video automatically. Try again, or fill in the details yourself below.";
         els.fetchStatus.className = "fetch-status is-error";
       }
     } else if (sourceType === "YouTube") {
@@ -1054,25 +1070,27 @@ els.fetchButton.addEventListener("click", async () => {
         result = {
           title: real.title || `YouTube video from ${real.host || "this link"}`,
           sourceType: "YouTube",
-          image: real.image || fallbackImage("YouTube"),
+          image: real.image || "",
         };
-        els.fetchStatus.textContent = "Found the title and thumbnail!";
+        els.fetchStatus.textContent = real.image
+          ? "Found the title and thumbnail!"
+          : "Found the title — no thumbnail detected.";
         els.fetchStatus.className = "fetch-status is-success";
       } catch {
         result = await placeholderRecipe(url);
-        els.fetchStatus.textContent =
-          "Couldn't read that video automatically — filled in a placeholder instead. (Is the reader server running?)";
+        els.fetchStatus.textContent = "Couldn't read that video automatically. Try again, or fill in the details yourself below.";
         els.fetchStatus.className = "fetch-status is-error";
       }
     } else {
       result = await placeholderRecipe(url);
       els.fetchStatus.textContent =
-        "Instagram Reels can't be auto-read yet — using a placeholder photo.";
+        "Instagram Reels can't be auto-read yet — add a title and photo yourself below.";
       els.fetchStatus.className = "fetch-status is-success";
     }
 
     els.titleInput.value = result.title;
     els.sourceTypeInput.value = result.sourceType;
+    if (sourceTypeDropdown) sourceTypeDropdown.render();
     els.imageInput.value = result.image;
     if (notes) els.notesInput.value = notes;
     els.formFields.disabled = false;
@@ -1173,3 +1191,197 @@ els.sidebarToggle.addEventListener("click", () => {
   els.sidebar.classList.contains("is-open") ? closeSidebar() : openSidebar();
 });
 els.sidebarOverlay.addEventListener("click", closeSidebar);
+
+// ---------- custom dropdowns ----------
+
+const dropdownClosers = [];
+
+function closeAllDropdowns() {
+  dropdownClosers.forEach((close) => close());
+}
+
+document.addEventListener("click", closeAllDropdowns);
+
+function setupDropdown({ selectEl, wrapperEl, extraItemLabel, onExtraItem }) {
+  const trigger = wrapperEl.querySelector(".dropdown-trigger");
+  const label = wrapperEl.querySelector(".dropdown-trigger-label");
+  const menu = wrapperEl.querySelector(".dropdown-menu");
+
+  function close() {
+    menu.classList.add("hidden");
+    wrapperEl.classList.remove("is-open");
+  }
+
+  function render() {
+    const options = Array.from(selectEl.options);
+    const selected = options.find((opt) => opt.value === selectEl.value);
+    label.textContent = selected ? selected.textContent : "";
+    menu.innerHTML = "";
+
+    options.forEach((opt) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "dropdown-option" + (opt.value === selectEl.value ? " is-selected" : "");
+      item.textContent = opt.textContent;
+      item.addEventListener("click", () => {
+        selectEl.value = opt.value;
+        selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+        render();
+        close();
+      });
+      menu.appendChild(item);
+    });
+
+    const resolvedExtraLabel = typeof extraItemLabel === "function" ? extraItemLabel() : extraItemLabel;
+    if (resolvedExtraLabel) {
+      const divider = document.createElement("div");
+      divider.className = "dropdown-divider";
+      menu.appendChild(divider);
+
+      const createItem = document.createElement("button");
+      createItem.type = "button";
+      createItem.className = "dropdown-option dropdown-option-create";
+      createItem.textContent = resolvedExtraLabel;
+      createItem.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onExtraItem({ menu, render, close });
+      });
+      menu.appendChild(createItem);
+    }
+  }
+
+  function open() {
+    closeAllDropdowns();
+    render();
+    menu.classList.remove("hidden");
+    wrapperEl.classList.add("is-open");
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu.classList.contains("hidden")) open();
+    else close();
+  });
+
+  menu.addEventListener("click", (e) => e.stopPropagation());
+
+  dropdownClosers.push(close);
+  render();
+
+  return { render, close };
+}
+
+sourceTypeDropdown = setupDropdown({
+  selectEl: els.sourceTypeInput,
+  wrapperEl: document.getElementById("sourceTypeDropdown"),
+});
+
+subcategoryDropdown = setupDropdown({
+  selectEl: els.subcategoryInput,
+  wrapperEl: document.getElementById("subcategoryDropdown"),
+  extraItemLabel: () => (els.categoryInput.value ? "+ New subcategory" : null),
+  onExtraItem: ({ menu, render, close }) => {
+    const categoryId = els.categoryInput.value;
+    if (!categoryId) {
+      close();
+      return;
+    }
+
+    const row = document.createElement("div");
+    row.className = "dropdown-create-row";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "inline-edit-input";
+    input.placeholder = "New subcategory name";
+    row.appendChild(input);
+    menu.appendChild(row);
+    row.scrollIntoView({ block: "nearest" });
+    input.focus();
+
+    let settled = false;
+    const commit = async () => {
+      if (settled) return;
+      settled = true;
+      const value = input.value.trim();
+      if (value) {
+        const created = await createSubcategory(categoryId, value);
+        if (created) {
+          populateSubcategorySelect(categoryId, created.id);
+        } else {
+          render();
+        }
+      } else {
+        render();
+      }
+      close();
+    };
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      }
+      if (e.key === "Escape") {
+        settled = true;
+        render();
+        close();
+      }
+    });
+    input.addEventListener("blur", commit);
+  },
+});
+
+sourceFilterDropdown = setupDropdown({
+  selectEl: els.sourceFilter,
+  wrapperEl: document.getElementById("sourceFilterDropdown"),
+});
+
+categoryDropdown = setupDropdown({
+  selectEl: els.categoryInput,
+  wrapperEl: document.getElementById("categoryDropdown"),
+  extraItemLabel: "+ New category",
+  onExtraItem: ({ menu, render, close }) => {
+    const row = document.createElement("div");
+    row.className = "dropdown-create-row";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "inline-edit-input";
+    input.placeholder = "New category name";
+    row.appendChild(input);
+    menu.appendChild(row);
+    row.scrollIntoView({ block: "nearest" });
+    input.focus();
+
+    let settled = false;
+    const commit = async () => {
+      if (settled) return;
+      settled = true;
+      const value = input.value.trim();
+      if (value) {
+        const created = await createCategory(value);
+        if (created) {
+          populateCategorySelect(created.id);
+          populateSubcategorySelect(created.id, "");
+        } else {
+          render();
+        }
+      } else {
+        render();
+      }
+      close();
+    };
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      }
+      if (e.key === "Escape") {
+        settled = true;
+        render();
+        close();
+      }
+    });
+    input.addEventListener("blur", commit);
+  },
+});

@@ -164,13 +164,20 @@
               <input id="searchInput" type="search" placeholder="Search your recipes..." />
             </label>
 
-            <select id="sourceFilter" aria-label="Filter by source">
-              <option value="all">All sources</option>
-              <option value="Instagram Reel">Instagram Reel</option>
-              <option value="TikTok">TikTok</option>
-              <option value="Website">Website</option>
-              <option value="YouTube">YouTube</option>
-            </select>
+            <div class="dropdown" id="sourceFilterDropdown">
+              <select id="sourceFilter" aria-label="Filter by source" class="native-select-hidden">
+                <option value="all">All sources</option>
+                <option value="Instagram Reel">Instagram Reel</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Website">Website</option>
+                <option value="YouTube">YouTube</option>
+              </select>
+              <button type="button" class="dropdown-trigger">
+                <span class="dropdown-trigger-label"></span>
+                <svg class="dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="dropdown-menu hidden"></div>
+            </div>
 
             <button id="addRecipeButton" class="primary-button" type="button">+ Add recipe</button>
           </div>
@@ -219,22 +226,43 @@
 
             <label>
               <span>Source type</span>
-              <select id="sourceTypeInput" name="sourceType" required>
-                <option value="Instagram Reel">Instagram Reel</option>
-                <option value="TikTok">TikTok</option>
-                <option value="Website">Website</option>
-                <option value="YouTube">YouTube</option>
-              </select>
+              <div class="dropdown" id="sourceTypeDropdown">
+                <select id="sourceTypeInput" name="sourceType" required class="native-select-hidden">
+                  <option value="Instagram Reel">Instagram Reel</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="Website">Website</option>
+                  <option value="YouTube">YouTube</option>
+                </select>
+                <button type="button" class="dropdown-trigger">
+                  <span class="dropdown-trigger-label"></span>
+                  <svg class="dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="dropdown-menu hidden"></div>
+              </div>
             </label>
 
             <label>
               <span>Category</span>
-              <select id="categoryInput" name="category"></select>
+              <div class="dropdown" id="categoryDropdown">
+                <select id="categoryInput" name="category" class="native-select-hidden"></select>
+                <button type="button" class="dropdown-trigger">
+                  <span class="dropdown-trigger-label"></span>
+                  <svg class="dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="dropdown-menu hidden"></div>
+              </div>
             </label>
 
             <label>
               <span>Subcategory</span>
-              <select id="subcategoryInput" name="subcategory"></select>
+              <div class="dropdown" id="subcategoryDropdown">
+                <select id="subcategoryInput" name="subcategory" class="native-select-hidden"></select>
+                <button type="button" class="dropdown-trigger">
+                  <span class="dropdown-trigger-label"></span>
+                  <svg class="dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="dropdown-menu hidden"></div>
+              </div>
             </label>
 
             <label>
@@ -303,6 +331,6 @@
       </article>
     </template>
 
-    <script type="module" src="app.js?v=11"></script>
+    <script type="module" src="app.js?v=13"></script>
   </body>
 </html>
