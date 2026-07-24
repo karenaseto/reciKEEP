@@ -13,10 +13,22 @@ const els = {
   signedOutGate: document.getElementById("signedOutGate"),
   landingView: document.getElementById("landingView"),
   authView: document.getElementById("authView"),
-  landingCtaButton: document.getElementById("landingCtaButton"),
-  landingNavCtaButton: document.getElementById("landingNavCtaButton"),
+  landingSignupButton: document.getElementById("landingSignupButton"),
+  landingLoginButton: document.getElementById("landingLoginButton"),
+  landingNavSignupButton: document.getElementById("landingNavSignupButton"),
+  landingNavLoginButton: document.getElementById("landingNavLoginButton"),
   backToLandingButton: document.getElementById("backToLandingButton"),
   gateSignInButton: document.getElementById("gateSignInButton"),
+  authViewTitle: document.getElementById("authViewTitle"),
+  authViewSubtitle: document.getElementById("authViewSubtitle"),
+  emailAuthForm: document.getElementById("emailAuthForm"),
+  authEmailInput: document.getElementById("authEmailInput"),
+  authPasswordInput: document.getElementById("authPasswordInput"),
+  emailAuthError: document.getElementById("emailAuthError"),
+  emailAuthNotice: document.getElementById("emailAuthNotice"),
+  emailAuthSubmit: document.getElementById("emailAuthSubmit"),
+  authSwitchPrompt: document.getElementById("authSwitchPrompt"),
+  authSwitchButton: document.getElementById("authSwitchButton"),
   authError: document.getElementById("authError"),
   appShell: document.getElementById("appShell"),
   accountAvatar: document.getElementById("accountAvatar"),
@@ -104,14 +116,62 @@ function showLanding() {
   els.authView.classList.add("hidden");
 }
 
-function showAuthView() {
+let authMode = "login";
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const isSignup = mode === "signup";
+  els.authViewTitle.textContent = isSignup ? "Create your account" : "Log in";
+  els.authViewSubtitle.textContent = isSignup
+    ? "Save your recipes and access them from any device."
+    : "Welcome back — sign in to see your saved recipes.";
+  els.emailAuthSubmit.textContent = isSignup ? "Create account" : "Log in";
+  els.authSwitchPrompt.textContent = isSignup ? "Already have an account?" : "Don't have an account?";
+  els.authSwitchButton.textContent = isSignup ? "Log in" : "Sign up";
+  els.emailAuthError.textContent = "";
+  els.emailAuthNotice.classList.add("hidden");
+  els.emailAuthForm.reset();
+}
+
+function showAuthView(mode) {
+  setAuthMode(mode || "login");
   els.landingView.classList.add("hidden");
   els.authView.classList.remove("hidden");
 }
 
-els.landingCtaButton.addEventListener("click", showAuthView);
-els.landingNavCtaButton.addEventListener("click", showAuthView);
+els.landingSignupButton.addEventListener("click", () => showAuthView("signup"));
+els.landingLoginButton.addEventListener("click", () => showAuthView("login"));
+els.landingNavSignupButton.addEventListener("click", () => showAuthView("signup"));
+els.landingNavLoginButton.addEventListener("click", () => showAuthView("login"));
+els.authSwitchButton.addEventListener("click", () => setAuthMode(authMode === "signup" ? "login" : "signup"));
 els.backToLandingButton.addEventListener("click", showLanding);
+
+els.emailAuthForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = els.authEmailInput.value.trim();
+  const password = els.authPasswordInput.value;
+  els.emailAuthError.textContent = "";
+  els.emailAuthNotice.classList.add("hidden");
+  els.emailAuthSubmit.disabled = true;
+
+  try {
+    if (authMode === "signup") {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        els.emailAuthError.textContent = error.message;
+      } else if (!data.session) {
+        els.emailAuthNotice.textContent = "Check your email to confirm your account, then log in.";
+        els.emailAuthNotice.classList.remove("hidden");
+        els.emailAuthForm.reset();
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) els.emailAuthError.textContent = error.message;
+    }
+  } finally {
+    els.emailAuthSubmit.disabled = false;
+  }
+});
 
 function renderAccount() {
   if (!currentUser) return;
