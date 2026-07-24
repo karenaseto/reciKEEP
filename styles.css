@@ -152,6 +152,103 @@ h3 {
   justify-content: center;
   background: var(--bg);
   padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.landing-view {
+  width: 100%;
+  max-width: 960px;
+  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.landing-logo-text {
+  flex: 1;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent-strong);
+}
+
+.landing-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1rem 0;
+}
+
+.landing-headline {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.15;
+  max-width: 22ch;
+}
+
+.landing-subhead {
+  color: var(--muted);
+  font-size: 1.1rem;
+  max-width: 52ch;
+  margin: 0;
+}
+
+.landing-cta {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  padding: 0.85rem 1.8rem;
+}
+
+.landing-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+
+.landing-feature {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.6rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.landing-feature-icon {
+  font-size: 1.8rem;
+}
+
+.landing-feature h3 {
+  font-size: 1.1rem;
+}
+
+.landing-feature p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.signed-out-card {
+  margin: auto;
+}
+
+@media (max-width: 720px) {
+  .landing-features {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-nav .secondary-button {
+    display: none;
+  }
 }
 
 .signed-out-card {

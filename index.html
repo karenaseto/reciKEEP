@@ -22,7 +22,45 @@
     </div>
 
     <div id="signedOutGate" class="signed-out-gate hidden">
-      <div class="signed-out-card">
+      <div id="landingView" class="landing-view">
+        <header class="landing-nav">
+          <span class="logo-mark" aria-hidden="true">🍳</span>
+          <span class="landing-logo-text">reciKEEP</span>
+          <button id="landingNavCtaButton" class="secondary-button" type="button">Create account / Log in</button>
+        </header>
+
+        <div class="landing-hero">
+          <p class="eyebrow">your recipes, all in one place</p>
+          <h1 class="landing-headline">Stop losing recipes in a dozen apps.</h1>
+          <p class="landing-subhead">
+            Save links from Instagram, TikTok, YouTube, and recipe sites the moment you find
+            them — organized your way, and ready whenever you need to cook.
+          </p>
+          <button id="landingCtaButton" class="primary-button landing-cta" type="button">
+            Create account / Log in
+          </button>
+        </div>
+
+        <div class="landing-features">
+          <div class="landing-feature">
+            <span class="landing-feature-icon" aria-hidden="true">🔗</span>
+            <h3>Paste any link</h3>
+            <p>Save recipes from Instagram, TikTok, YouTube, or any recipe site in one click.</p>
+          </div>
+          <div class="landing-feature">
+            <span class="landing-feature-icon" aria-hidden="true">🗂️</span>
+            <h3>Organize your way</h3>
+            <p>Sort into custom categories and subcategories that actually make sense to you.</p>
+          </div>
+          <div class="landing-feature">
+            <span class="landing-feature-icon" aria-hidden="true">☁️</span>
+            <h3>Access anywhere</h3>
+            <p>Sign in with Google and your recipes follow you to any device.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="authView" class="signed-out-card hidden">
         <span class="logo-mark" aria-hidden="true">🍳</span>
         <h1>reciKEEP</h1>
         <p>Sign in with Google to save your recipes to your own account and access them from any device.</p>
@@ -35,6 +73,7 @@
           </svg>
           Sign in with Google
         </button>
+        <button id="backToLandingButton" class="link-button" type="button">← Back</button>
       </div>
     </div>
 
@@ -233,6 +272,6 @@
       </article>
     </template>
 
-    <script type="module" src="app.js?v=7"></script>
+    <script type="module" src="app.js?v=8"></script>
   </body>
 </html>

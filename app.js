@@ -11,6 +11,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const els = {
   authLoading: document.getElementById("authLoading"),
   signedOutGate: document.getElementById("signedOutGate"),
+  landingView: document.getElementById("landingView"),
+  authView: document.getElementById("authView"),
+  landingCtaButton: document.getElementById("landingCtaButton"),
+  landingNavCtaButton: document.getElementById("landingNavCtaButton"),
+  backToLandingButton: document.getElementById("backToLandingButton"),
   gateSignInButton: document.getElementById("gateSignInButton"),
   authError: document.getElementById("authError"),
   appShell: document.getElementById("appShell"),
@@ -91,7 +96,22 @@ function showSignedOut() {
   els.authLoading.classList.add("hidden");
   els.appShell.classList.add("hidden");
   els.signedOutGate.classList.remove("hidden");
+  showLanding();
 }
+
+function showLanding() {
+  els.landingView.classList.remove("hidden");
+  els.authView.classList.add("hidden");
+}
+
+function showAuthView() {
+  els.landingView.classList.add("hidden");
+  els.authView.classList.remove("hidden");
+}
+
+els.landingCtaButton.addEventListener("click", showAuthView);
+els.landingNavCtaButton.addEventListener("click", showAuthView);
+els.backToLandingButton.addEventListener("click", showLanding);
 
 function renderAccount() {
   if (!currentUser) return;
