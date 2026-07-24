@@ -1279,11 +1279,16 @@ sourceTypeDropdown = setupDropdown({
 subcategoryDropdown = setupDropdown({
   selectEl: els.subcategoryInput,
   wrapperEl: document.getElementById("subcategoryDropdown"),
-  extraItemLabel: () => (els.categoryInput.value ? "+ New subcategory" : null),
+  extraItemLabel: "+ New subcategory",
   onExtraItem: ({ menu, render, close }) => {
     const categoryId = els.categoryInput.value;
     if (!categoryId) {
-      close();
+      const hint = document.createElement("div");
+      hint.className = "dropdown-create-row dropdown-hint";
+      hint.textContent = "Pick a category first";
+      menu.appendChild(hint);
+      hint.scrollIntoView({ block: "nearest" });
+      setTimeout(() => render(), 1400);
       return;
     }
 

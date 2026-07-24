@@ -805,6 +805,14 @@ textarea {
   background: var(--surface);
 }
 
+.dropdown-hint {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  padding: 0.5rem 0.4rem;
+}
+
 button {
   border: 0;
   cursor: pointer;
