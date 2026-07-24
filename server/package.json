@@ -1,0 +1,17 @@
+{
+  "name": "recikeep-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Small local backend for reciKEEP that reads a recipe webpage's Open Graph tags and Recipe schema so the Add Recipe dialog can auto-fill the real title and photo.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
