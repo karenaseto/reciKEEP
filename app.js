@@ -40,8 +40,10 @@ const els = {
   sidebarOverlay: document.getElementById("sidebarOverlay"),
   navAll: document.getElementById("navAll"),
   navFavorites: document.getElementById("navFavorites"),
+  navMade: document.getElementById("navMade"),
   countAll: document.getElementById("countAll"),
   countFavorites: document.getElementById("countFavorites"),
+  countMade: document.getElementById("countMade"),
   categoryTree: document.getElementById("categoryTree"),
   addCategoryButton: document.getElementById("addCategoryButton"),
 
@@ -70,6 +72,7 @@ const els = {
   categoryInput: document.getElementById("categoryInput"),
   clearCategoryButton: document.getElementById("clearCategoryButton"),
   subcategoryInput: document.getElementById("subcategoryInput"),
+  clearSubcategoryButton: document.getElementById("clearSubcategoryButton"),
   imageInput: document.getElementById("imageInput"),
   tagInput: document.getElementById("tagInput"),
   notesInput: document.getElementById("notesInput"),
@@ -487,6 +490,7 @@ function recipesInScope() {
   const { scope } = ui;
   if (scope.type === "all") return state.recipes;
   if (scope.type === "favorites") return state.recipes.filter((r) => r.favorite);
+  if (scope.type === "made") return state.recipes.filter((r) => r.made);
   if (scope.type === "category") return state.recipes.filter((r) => r.categoryId === scope.id);
   if (scope.type === "subcategory")
     return state.recipes.filter((r) => r.subcategoryId === scope.id);
@@ -515,9 +519,11 @@ function filteredRecipes() {
 function renderSidebar() {
   els.countAll.textContent = state.recipes.length;
   els.countFavorites.textContent = state.recipes.filter((r) => r.favorite).length;
+  els.countMade.textContent = state.recipes.filter((r) => r.made).length;
 
   els.navAll.classList.toggle("active", ui.scope.type === "all");
   els.navFavorites.classList.toggle("active", ui.scope.type === "favorites");
+  els.navMade.classList.toggle("active", ui.scope.type === "made");
 
   els.categoryTree.innerHTML = "";
 
@@ -825,6 +831,9 @@ function renderTopbar() {
   } else if (scope.type === "favorites") {
     els.scopeEyebrow.textContent = "Browsing";
     els.scopeTitle.textContent = "Favorites";
+  } else if (scope.type === "made") {
+    els.scopeEyebrow.textContent = "Browsing";
+    els.scopeTitle.textContent = "Made";
   } else if (scope.type === "category") {
     const cat = getCategory(scope.id);
     els.scopeEyebrow.textContent = "Category";
@@ -946,10 +955,6 @@ function updateClearCategoryButton() {
 
 function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
   els.subcategoryInput.innerHTML = "";
-  const noneOpt = document.createElement("option");
-  noneOpt.value = "";
-  noneOpt.textContent = "No subcategory";
-  els.subcategoryInput.appendChild(noneOpt);
 
   subcategoriesFor(categoryId).forEach((sub) => {
     const opt = document.createElement("option");
@@ -959,6 +964,11 @@ function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
   });
   els.subcategoryInput.value = selectedSubcategoryId || "";
   if (subcategoryDropdown) subcategoryDropdown.render();
+  updateClearSubcategoryButton();
+}
+
+function updateClearSubcategoryButton() {
+  els.clearSubcategoryButton.classList.toggle("hidden", !els.subcategoryInput.value);
 }
 
 els.categoryInput.addEventListener("change", () => {
@@ -970,6 +980,14 @@ els.clearCategoryButton.addEventListener("click", () => {
   els.categoryInput.value = "";
   if (categoryDropdown) categoryDropdown.render();
   els.categoryInput.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
+els.subcategoryInput.addEventListener("change", updateClearSubcategoryButton);
+
+els.clearSubcategoryButton.addEventListener("click", () => {
+  els.subcategoryInput.value = "";
+  if (subcategoryDropdown) subcategoryDropdown.render();
+  els.subcategoryInput.dispatchEvent(new Event("change", { bubbles: true }));
 });
 
 function openRecipeDialog(mode, recipe) {
@@ -1215,6 +1233,7 @@ els.emptyStateAddButton.addEventListener("click", () => openRecipeDialog("add"))
 
 els.navAll.addEventListener("click", () => selectScope({ type: "all" }));
 els.navFavorites.addEventListener("click", () => selectScope({ type: "favorites" }));
+els.navMade.addEventListener("click", () => selectScope({ type: "made" }));
 
 els.searchInput.addEventListener("input", () => {
   ui.search = els.searchInput.value;
@@ -1337,6 +1356,7 @@ sourceTypeDropdown = setupDropdown({
 subcategoryDropdown = setupDropdown({
   selectEl: els.subcategoryInput,
   wrapperEl: document.getElementById("subcategoryDropdown"),
+  placeholder: "No subcategory",
   extraItemLabel: "+ New subcategory",
   onExtraItem: ({ menu, render, close }) => {
     const categoryId = els.categoryInput.value;
