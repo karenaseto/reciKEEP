@@ -49,6 +49,7 @@ const els = {
   scopeTitle: document.getElementById("scopeTitle"),
   searchInput: document.getElementById("searchInput"),
   sourceFilter: document.getElementById("sourceFilter"),
+  sortSelect: document.getElementById("sortSelect"),
   addRecipeButton: document.getElementById("addRecipeButton"),
   recipesGrid: document.getElementById("recipesGrid"),
   emptyState: document.getElementById("emptyState"),
@@ -72,6 +73,7 @@ const els = {
   tagInput: document.getElementById("tagInput"),
   notesInput: document.getElementById("notesInput"),
   favoriteInput: document.getElementById("favoriteInput"),
+  madeInput: document.getElementById("madeInput"),
   formError: document.getElementById("formError"),
   deleteRecipeButton: document.getElementById("deleteRecipeButton"),
   cancelDialogButton: document.getElementById("cancelDialogButton"),
@@ -86,6 +88,7 @@ const ui = {
   scope: { type: "all" },
   search: "",
   source: "all",
+  sort: "newest",
   expanded: new Set(),
   editingRecipeId: null,
 };
@@ -94,6 +97,7 @@ let categoryDropdown = null;
 let subcategoryDropdown = null;
 let sourceTypeDropdown = null;
 let sourceFilterDropdown = null;
+let sortDropdown = null;
 
 // ---------- auth ----------
 
@@ -210,10 +214,13 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     ui.scope = { type: "all" };
     ui.search = "";
     ui.source = "all";
+    ui.sort = "newest";
     ui.expanded = new Set();
     els.searchInput.value = "";
     els.sourceFilter.value = "all";
     if (sourceFilterDropdown) sourceFilterDropdown.render();
+    els.sortSelect.value = "newest";
+    if (sortDropdown) sortDropdown.render();
     await loadAllData();
     showApp();
     renderAll();
@@ -245,6 +252,7 @@ function rowToRecipe(row) {
     tag: row.tag || "",
     notes: row.notes || "",
     favorite: row.favorite,
+    made: row.made,
     createdAt: row.created_at,
   };
 }
@@ -376,6 +384,7 @@ async function createRecipe(payload) {
       tag: payload.tag,
       notes: payload.notes,
       favorite: payload.favorite,
+      made: payload.made,
     })
     .select()
     .single();
@@ -400,6 +409,7 @@ async function updateRecipe(id, payload) {
       tag: payload.tag,
       notes: payload.notes,
       favorite: payload.favorite,
+      made: payload.made,
     })
     .eq("id", id);
   if (error) {
@@ -430,6 +440,19 @@ async function toggleFavorite(recipe) {
   if (error) {
     recipe.favorite = !next;
     renderSidebar();
+    renderGrid();
+    showAuthError(error.message);
+  }
+}
+
+async function toggleMade(recipe) {
+  const next = !recipe.made;
+  recipe.made = next;
+  renderGrid();
+
+  const { error } = await supabase.from("recipes").update({ made: next }).eq("id", recipe.id);
+  if (error) {
+    recipe.made = !next;
     renderGrid();
     showAuthError(error.message);
   }
@@ -827,8 +850,22 @@ function renderGrid() {
 
   list
     .slice()
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .sort(sortComparator(ui.sort))
     .forEach((recipe) => els.recipesGrid.appendChild(buildRecipeCard(recipe)));
+}
+
+function sortComparator(sort) {
+  switch (sort) {
+    case "oldest":
+      return (a, b) => new Date(a.createdAt) - new Date(b.createdAt);
+    case "title-asc":
+      return (a, b) => a.title.localeCompare(b.title);
+    case "title-desc":
+      return (a, b) => b.title.localeCompare(a.title);
+    case "newest":
+    default:
+      return (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
+  }
 }
 
 function buildRecipeCard(recipe) {
@@ -841,6 +878,11 @@ function buildRecipeCard(recipe) {
   const favBtn = node.querySelector(".favorite-chip");
   favBtn.classList.toggle("is-favorite", !!recipe.favorite);
   favBtn.addEventListener("click", () => toggleFavorite(recipe));
+
+  const madeBtn = node.querySelector(".made-chip");
+  madeBtn.classList.toggle("is-made", !!recipe.made);
+  madeBtn.setAttribute("aria-label", recipe.made ? "Mark as not made" : "Mark as made");
+  madeBtn.addEventListener("click", () => toggleMade(recipe));
 
   const category = getCategory(recipe.categoryId);
   const subcategory = getSubcategory(recipe.subcategoryId);
@@ -885,10 +927,13 @@ function renderAll() {
 
 function populateCategorySelect(selectedCategoryId) {
   els.categoryInput.innerHTML = "";
-  const noneOpt = document.createElement("option");
-  noneOpt.value = "";
-  noneOpt.textContent = "Uncategorized";
-  els.categoryInput.appendChild(noneOpt);
+
+  if (selectedCategoryId) {
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "Uncategorized";
+    els.categoryInput.appendChild(noneOpt);
+  }
 
   state.categories.forEach((cat) => {
     const opt = document.createElement("option");
@@ -945,6 +990,7 @@ function openRecipeDialog(mode, recipe) {
     els.tagInput.value = recipe.tag || "";
     els.notesInput.value = recipe.notes || "";
     els.favoriteInput.checked = !!recipe.favorite;
+    els.madeInput.checked = !!recipe.made;
   } else {
     els.dialogEyebrow.textContent = "Recipe details";
     els.dialogTitle.textContent = "Add a recipe";
@@ -1131,6 +1177,7 @@ els.recipeForm.addEventListener("submit", async (e) => {
     tag: els.tagInput.value.trim(),
     notes: els.notesInput.value.trim(),
     favorite: els.favoriteInput.checked,
+    made: els.madeInput.checked,
   };
 
   els.saveRecipeButton?.setAttribute("disabled", "true");
@@ -1173,6 +1220,11 @@ els.sourceFilter.addEventListener("change", () => {
   renderGrid();
 });
 
+els.sortSelect.addEventListener("change", () => {
+  ui.sort = els.sortSelect.value;
+  renderGrid();
+});
+
 // ---------- mobile sidebar ----------
 
 function openSidebar() {
@@ -1202,7 +1254,7 @@ function closeAllDropdowns() {
 
 document.addEventListener("click", closeAllDropdowns);
 
-function setupDropdown({ selectEl, wrapperEl, extraItemLabel, onExtraItem }) {
+function setupDropdown({ selectEl, wrapperEl, extraItemLabel, onExtraItem, placeholder }) {
   const trigger = wrapperEl.querySelector(".dropdown-trigger");
   const label = wrapperEl.querySelector(".dropdown-trigger-label");
   const menu = wrapperEl.querySelector(".dropdown-menu");
@@ -1215,7 +1267,7 @@ function setupDropdown({ selectEl, wrapperEl, extraItemLabel, onExtraItem }) {
   function render() {
     const options = Array.from(selectEl.options);
     const selected = options.find((opt) => opt.value === selectEl.value);
-    label.textContent = selected ? selected.textContent : "";
+    label.textContent = selected ? selected.textContent : placeholder || "";
     menu.innerHTML = "";
 
     options.forEach((opt) => {
@@ -1341,9 +1393,15 @@ sourceFilterDropdown = setupDropdown({
   wrapperEl: document.getElementById("sourceFilterDropdown"),
 });
 
+sortDropdown = setupDropdown({
+  selectEl: els.sortSelect,
+  wrapperEl: document.getElementById("sortDropdown"),
+});
+
 categoryDropdown = setupDropdown({
   selectEl: els.categoryInput,
   wrapperEl: document.getElementById("categoryDropdown"),
+  placeholder: "Uncategorized",
   extraItemLabel: "+ New category",
   onExtraItem: ({ menu, render, close }) => {
     const row = document.createElement("div");

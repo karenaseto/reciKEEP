@@ -958,6 +958,31 @@ button {
   fill: currentColor;
 }
 
+.made-chip {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+
+.made-chip svg {
+  width: 17px;
+  height: 17px;
+}
+
+.made-chip.is-made {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
 .card-body {
   display: flex;
   flex-direction: column;
@@ -1173,6 +1198,9 @@ button {
 
 .checkbox-row {
   margin-top: -0.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
 }
 
 .favorite-label {
