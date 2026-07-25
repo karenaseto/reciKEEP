@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <div id="authLoading" class="auth-loading">
@@ -256,7 +256,10 @@
             </label>
 
             <label>
-              <span>Category</span>
+              <span class="field-label-row">
+                Category
+                <button type="button" id="clearCategoryButton" class="link-button hidden">Clear</button>
+              </span>
               <div class="dropdown" id="categoryDropdown">
                 <select id="categoryInput" name="category" class="native-select-hidden"></select>
                 <button type="button" class="dropdown-trigger">
@@ -352,6 +355,6 @@
       </article>
     </template>
 
-    <script type="module" src="app.js?v=16"></script>
+    <script type="module" src="app.js?v=17"></script>
   </body>
 </html>

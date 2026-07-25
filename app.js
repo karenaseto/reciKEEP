@@ -68,6 +68,7 @@ const els = {
   titleInput: document.getElementById("titleInput"),
   sourceTypeInput: document.getElementById("sourceTypeInput"),
   categoryInput: document.getElementById("categoryInput"),
+  clearCategoryButton: document.getElementById("clearCategoryButton"),
   subcategoryInput: document.getElementById("subcategoryInput"),
   imageInput: document.getElementById("imageInput"),
   tagInput: document.getElementById("tagInput"),
@@ -928,13 +929,6 @@ function renderAll() {
 function populateCategorySelect(selectedCategoryId) {
   els.categoryInput.innerHTML = "";
 
-  if (selectedCategoryId) {
-    const noneOpt = document.createElement("option");
-    noneOpt.value = "";
-    noneOpt.textContent = "Uncategorized";
-    els.categoryInput.appendChild(noneOpt);
-  }
-
   state.categories.forEach((cat) => {
     const opt = document.createElement("option");
     opt.value = cat.id;
@@ -943,6 +937,11 @@ function populateCategorySelect(selectedCategoryId) {
   });
   els.categoryInput.value = selectedCategoryId || "";
   if (categoryDropdown) categoryDropdown.render();
+  updateClearCategoryButton();
+}
+
+function updateClearCategoryButton() {
+  els.clearCategoryButton.classList.toggle("hidden", !els.categoryInput.value);
 }
 
 function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
@@ -964,6 +963,13 @@ function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
 
 els.categoryInput.addEventListener("change", () => {
   populateSubcategorySelect(els.categoryInput.value, "");
+  updateClearCategoryButton();
+});
+
+els.clearCategoryButton.addEventListener("click", () => {
+  els.categoryInput.value = "";
+  if (categoryDropdown) categoryDropdown.render();
+  els.categoryInput.dispatchEvent(new Event("change", { bubbles: true }));
 });
 
 function openRecipeDialog(mode, recipe) {
