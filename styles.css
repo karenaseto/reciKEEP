@@ -983,6 +983,35 @@ button {
   color: #fff;
 }
 
+.want-chip {
+  position: absolute;
+  bottom: 0.7rem;
+  left: 0.7rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+
+.want-chip svg {
+  width: 17px;
+  height: 17px;
+}
+
+.want-chip.is-wanted {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+.want-chip.is-wanted svg {
+  fill: currentColor;
+}
+
 .card-body {
   display: flex;
   flex-direction: column;

@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <div id="authLoading" class="auth-loading">
@@ -139,6 +139,13 @@
               Favorites
             </span>
             <span class="nav-count" id="countFavorites">0</span>
+          </button>
+          <button class="nav-item" id="navWantToMake" type="button" data-scope-type="wantToMake">
+            <span class="nav-item-label">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              Want to Make
+            </span>
+            <span class="nav-count" id="countWantToMake">0</span>
           </button>
           <button class="nav-item" id="navMade" type="button" data-scope-type="made">
             <span class="nav-item-label">
@@ -314,6 +321,10 @@
               <span>Mark as favorite</span>
             </label>
             <label class="favorite-label">
+              <input id="wantToMakeInput" name="wantToMake" type="checkbox" />
+              <span>Want to make</span>
+            </label>
+            <label class="favorite-label">
               <input id="madeInput" name="made" type="checkbox" />
               <span>I've made this</span>
             </label>
@@ -341,6 +352,9 @@
           <button class="favorite-chip" type="button" aria-label="Toggle favorite">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </button>
+          <button class="want-chip" type="button" aria-label="Toggle want to make">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
         </div>
 
         <div class="card-body">
@@ -365,6 +379,6 @@
       </article>
     </template>
 
-    <script type="module" src="app.js?v=18"></script>
+    <script type="module" src="app.js?v=19"></script>
   </body>
 </html>

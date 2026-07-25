@@ -40,9 +40,11 @@ const els = {
   sidebarOverlay: document.getElementById("sidebarOverlay"),
   navAll: document.getElementById("navAll"),
   navFavorites: document.getElementById("navFavorites"),
+  navWantToMake: document.getElementById("navWantToMake"),
   navMade: document.getElementById("navMade"),
   countAll: document.getElementById("countAll"),
   countFavorites: document.getElementById("countFavorites"),
+  countWantToMake: document.getElementById("countWantToMake"),
   countMade: document.getElementById("countMade"),
   categoryTree: document.getElementById("categoryTree"),
   addCategoryButton: document.getElementById("addCategoryButton"),
@@ -77,6 +79,7 @@ const els = {
   tagInput: document.getElementById("tagInput"),
   notesInput: document.getElementById("notesInput"),
   favoriteInput: document.getElementById("favoriteInput"),
+  wantToMakeInput: document.getElementById("wantToMakeInput"),
   madeInput: document.getElementById("madeInput"),
   formError: document.getElementById("formError"),
   deleteRecipeButton: document.getElementById("deleteRecipeButton"),
@@ -257,6 +260,7 @@ function rowToRecipe(row) {
     notes: row.notes || "",
     favorite: row.favorite,
     made: row.made,
+    wantToMake: row.want_to_make,
     createdAt: row.created_at,
   };
 }
@@ -389,6 +393,7 @@ async function createRecipe(payload) {
       notes: payload.notes,
       favorite: payload.favorite,
       made: payload.made,
+      want_to_make: payload.wantToMake,
     })
     .select()
     .single();
@@ -414,6 +419,7 @@ async function updateRecipe(id, payload) {
       notes: payload.notes,
       favorite: payload.favorite,
       made: payload.made,
+      want_to_make: payload.wantToMake,
     })
     .eq("id", id);
   if (error) {
@@ -452,11 +458,28 @@ async function toggleFavorite(recipe) {
 async function toggleMade(recipe) {
   const next = !recipe.made;
   recipe.made = next;
+  renderSidebar();
   renderGrid();
 
   const { error } = await supabase.from("recipes").update({ made: next }).eq("id", recipe.id);
   if (error) {
     recipe.made = !next;
+    renderSidebar();
+    renderGrid();
+    showAuthError(error.message);
+  }
+}
+
+async function toggleWantToMake(recipe) {
+  const next = !recipe.wantToMake;
+  recipe.wantToMake = next;
+  renderSidebar();
+  renderGrid();
+
+  const { error } = await supabase.from("recipes").update({ want_to_make: next }).eq("id", recipe.id);
+  if (error) {
+    recipe.wantToMake = !next;
+    renderSidebar();
     renderGrid();
     showAuthError(error.message);
   }
@@ -491,6 +514,7 @@ function recipesInScope() {
   if (scope.type === "all") return state.recipes;
   if (scope.type === "favorites") return state.recipes.filter((r) => r.favorite);
   if (scope.type === "made") return state.recipes.filter((r) => r.made);
+  if (scope.type === "wantToMake") return state.recipes.filter((r) => r.wantToMake);
   if (scope.type === "category") return state.recipes.filter((r) => r.categoryId === scope.id);
   if (scope.type === "subcategory")
     return state.recipes.filter((r) => r.subcategoryId === scope.id);
@@ -519,10 +543,12 @@ function filteredRecipes() {
 function renderSidebar() {
   els.countAll.textContent = state.recipes.length;
   els.countFavorites.textContent = state.recipes.filter((r) => r.favorite).length;
+  els.countWantToMake.textContent = state.recipes.filter((r) => r.wantToMake).length;
   els.countMade.textContent = state.recipes.filter((r) => r.made).length;
 
   els.navAll.classList.toggle("active", ui.scope.type === "all");
   els.navFavorites.classList.toggle("active", ui.scope.type === "favorites");
+  els.navWantToMake.classList.toggle("active", ui.scope.type === "wantToMake");
   els.navMade.classList.toggle("active", ui.scope.type === "made");
 
   els.categoryTree.innerHTML = "";
@@ -831,6 +857,9 @@ function renderTopbar() {
   } else if (scope.type === "favorites") {
     els.scopeEyebrow.textContent = "Browsing";
     els.scopeTitle.textContent = "Favorites";
+  } else if (scope.type === "wantToMake") {
+    els.scopeEyebrow.textContent = "Browsing";
+    els.scopeTitle.textContent = "Want to Make";
   } else if (scope.type === "made") {
     els.scopeEyebrow.textContent = "Browsing";
     els.scopeTitle.textContent = "Made";
@@ -893,6 +922,11 @@ function buildRecipeCard(recipe) {
   madeBtn.classList.toggle("is-made", !!recipe.made);
   madeBtn.setAttribute("aria-label", recipe.made ? "Mark as not made" : "Mark as made");
   madeBtn.addEventListener("click", () => toggleMade(recipe));
+
+  const wantBtn = node.querySelector(".want-chip");
+  wantBtn.classList.toggle("is-wanted", !!recipe.wantToMake);
+  wantBtn.setAttribute("aria-label", recipe.wantToMake ? "Remove from want to make" : "Add to want to make");
+  wantBtn.addEventListener("click", () => toggleWantToMake(recipe));
 
   const category = getCategory(recipe.categoryId);
   const subcategory = getSubcategory(recipe.subcategoryId);
@@ -1014,6 +1048,7 @@ function openRecipeDialog(mode, recipe) {
     els.tagInput.value = recipe.tag || "";
     els.notesInput.value = recipe.notes || "";
     els.favoriteInput.checked = !!recipe.favorite;
+    els.wantToMakeInput.checked = !!recipe.wantToMake;
     els.madeInput.checked = !!recipe.made;
   } else {
     els.dialogEyebrow.textContent = "Recipe details";
@@ -1201,6 +1236,7 @@ els.recipeForm.addEventListener("submit", async (e) => {
     tag: els.tagInput.value.trim(),
     notes: els.notesInput.value.trim(),
     favorite: els.favoriteInput.checked,
+    wantToMake: els.wantToMakeInput.checked,
     made: els.madeInput.checked,
   };
 
@@ -1233,6 +1269,7 @@ els.emptyStateAddButton.addEventListener("click", () => openRecipeDialog("add"))
 
 els.navAll.addEventListener("click", () => selectScope({ type: "all" }));
 els.navFavorites.addEventListener("click", () => selectScope({ type: "favorites" }));
+els.navWantToMake.addEventListener("click", () => selectScope({ type: "wantToMake" }));
 els.navMade.addEventListener("click", () => selectScope({ type: "made" }));
 
 els.searchInput.addEventListener("input", () => {
