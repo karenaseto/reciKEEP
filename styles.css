@@ -718,6 +718,10 @@ textarea {
   cursor: pointer;
 }
 
+.form-fields .dropdown-trigger {
+  background: var(--surface);
+}
+
 .dropdown-trigger:hover {
   border-color: var(--accent);
 }
