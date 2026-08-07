@@ -486,6 +486,27 @@ h3 {
   color: var(--accent-strong);
 }
 
+.category-emoji,
+.subcategory-emoji {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.category-emoji:hover,
+.subcategory-emoji:hover {
+  transform: scale(1.15);
+}
+
+.emoji-edit-input {
+  width: 2.2rem;
+  flex-shrink: 0;
+  padding: 0.2rem 0.3rem;
+  text-align: center;
+}
+
 .category-name,
 .subcategory-name {
   flex: 1;

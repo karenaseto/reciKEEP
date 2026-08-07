@@ -237,14 +237,74 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   }
 });
 
+// ---------- emoji auto-detection ----------
+
+const DEFAULT_EMOJI = "🍽️";
+
+const EMOJI_KEYWORDS = [
+  { keywords: ["bread", "loaf", "baguette", "toast", "sourdough"], emoji: "🍞" },
+  { keywords: ["cookie"], emoji: "🍪" },
+  { keywords: ["cake", "cupcake", "birthday"], emoji: "🍰" },
+  { keywords: ["pie"], emoji: "🥧" },
+  { keywords: ["donut", "doughnut"], emoji: "🍩" },
+  { keywords: ["muffin"], emoji: "🧁" },
+  { keywords: ["pancake", "waffle"], emoji: "🥞" },
+  { keywords: ["breakfast", "brunch"], emoji: "🍳" },
+  { keywords: ["dinner", "entree", "main"], emoji: "🍽️" },
+  { keywords: ["lunch"], emoji: "🥪" },
+  { keywords: ["soup", "stew", "chili"], emoji: "🍲" },
+  { keywords: ["salad"], emoji: "🥗" },
+  { keywords: ["pasta", "noodle", "spaghetti", "ramen"], emoji: "🍝" },
+  { keywords: ["pizza"], emoji: "🍕" },
+  { keywords: ["taco", "burrito", "mexican"], emoji: "🌮" },
+  { keywords: ["burger"], emoji: "🍔" },
+  { keywords: ["sandwich"], emoji: "🥪" },
+  { keywords: ["sushi", "japanese"], emoji: "🍣" },
+  { keywords: ["curry", "indian"], emoji: "🍛" },
+  { keywords: ["chicken"], emoji: "🍗" },
+  { keywords: ["beef", "steak"], emoji: "🥩" },
+  { keywords: ["pork", "bacon", "ham"], emoji: "🥓" },
+  { keywords: ["seafood", "fish", "shrimp", "salmon"], emoji: "🐟" },
+  { keywords: ["egg"], emoji: "🥚" },
+  { keywords: ["cheese"], emoji: "🧀" },
+  { keywords: ["vegetarian", "vegan", "veggie", "vegetable"], emoji: "🥦" },
+  { keywords: ["fruit"], emoji: "🍓" },
+  { keywords: ["rice"], emoji: "🍚" },
+  { keywords: ["snack", "appetizer", "side"], emoji: "🍿" },
+  { keywords: ["drink", "beverage", "cocktail", "smoothie", "juice"], emoji: "🥤" },
+  { keywords: ["coffee"], emoji: "☕" },
+  { keywords: ["tea"], emoji: "🍵" },
+  { keywords: ["wine"], emoji: "🍷" },
+  { keywords: ["beer"], emoji: "🍺" },
+  { keywords: ["ice cream", "gelato"], emoji: "🍨" },
+  { keywords: ["chocolate"], emoji: "🍫" },
+  { keywords: ["dessert", "sweet", "treat"], emoji: "🍮" },
+  { keywords: ["bbq", "barbecue", "grill"], emoji: "🍖" },
+  { keywords: ["holiday", "christmas"], emoji: "🎄" },
+  { keywords: ["healthy"], emoji: "🥗" },
+  { keywords: ["bake", "baking"], emoji: "🧁" },
+];
+
+function guessEmoji(name) {
+  const lower = name.toLowerCase();
+  const match = EMOJI_KEYWORDS.find(({ keywords }) => keywords.some((k) => lower.includes(k)));
+  return match ? match.emoji : DEFAULT_EMOJI;
+}
+
 // ---------- Supabase <-> app state mapping ----------
 
 function rowToCategory(row) {
-  return { id: row.id, name: row.name, createdAt: row.created_at };
+  return { id: row.id, name: row.name, emoji: row.emoji || guessEmoji(row.name), createdAt: row.created_at };
 }
 
 function rowToSubcategory(row) {
-  return { id: row.id, name: row.name, categoryId: row.category_id, createdAt: row.created_at };
+  return {
+    id: row.id,
+    name: row.name,
+    categoryId: row.category_id,
+    emoji: row.emoji || guessEmoji(row.name),
+    createdAt: row.created_at,
+  };
 }
 
 function rowToRecipe(row) {
@@ -280,6 +340,38 @@ async function loadAllData() {
     subcategories: (subRes.data || []).map(rowToSubcategory),
     recipes: (recRes.data || []).map(rowToRecipe),
   };
+
+  backfillMissingEmojis(catRes.data || [], subRes.data || []);
+}
+
+function backfillMissingEmojis(categoryRows, subcategoryRows) {
+  categoryRows
+    .filter((row) => !row.emoji)
+    .forEach((row) => {
+      const category = state.categories.find((c) => c.id === row.id);
+      if (!category) return;
+      supabase
+        .from("categories")
+        .update({ emoji: category.emoji })
+        .eq("id", row.id)
+        .then(({ error }) => {
+          if (error) console.error("Failed to backfill category emoji", error);
+        });
+    });
+
+  subcategoryRows
+    .filter((row) => !row.emoji)
+    .forEach((row) => {
+      const sub = state.subcategories.find((s) => s.id === row.id);
+      if (!sub) return;
+      supabase
+        .from("subcategories")
+        .update({ emoji: sub.emoji })
+        .eq("id", row.id)
+        .then(({ error }) => {
+          if (error) console.error("Failed to backfill subcategory emoji", error);
+        });
+    });
 }
 
 // ---------- mutations (Supabase-backed) ----------
@@ -287,7 +379,7 @@ async function loadAllData() {
 async function createCategory(name) {
   const { data, error } = await supabase
     .from("categories")
-    .insert({ name, user_id: currentUser.id })
+    .insert({ name, emoji: guessEmoji(name), user_id: currentUser.id })
     .select()
     .single();
   if (error) {
@@ -309,6 +401,14 @@ async function renameCategory(category, newName) {
   category.name = newName;
   renderSidebar();
   renderTopbar();
+}
+
+async function updateCategoryEmoji(category, emoji) {
+  category.emoji = emoji;
+  renderSidebar();
+
+  const { error } = await supabase.from("categories").update({ emoji }).eq("id", category.id);
+  if (error) showAuthError(error.message);
 }
 
 async function removeCategory(category) {
@@ -338,7 +438,7 @@ async function removeCategory(category) {
 async function createSubcategory(categoryId, name) {
   const { data, error } = await supabase
     .from("subcategories")
-    .insert({ name, category_id: categoryId, user_id: currentUser.id })
+    .insert({ name, category_id: categoryId, emoji: guessEmoji(name), user_id: currentUser.id })
     .select()
     .single();
   if (error) {
@@ -360,6 +460,14 @@ async function renameSubcategory(sub, newName) {
   sub.name = newName;
   renderSidebar();
   renderTopbar();
+}
+
+async function updateSubcategoryEmoji(sub, emoji) {
+  sub.emoji = emoji;
+  renderSidebar();
+
+  const { error } = await supabase.from("subcategories").update({ emoji }).eq("id", sub.id);
+  if (error) showAuthError(error.message);
 }
 
 async function removeSubcategory(sub) {
@@ -587,6 +695,16 @@ function buildCategoryRow(category) {
     renderSidebar();
   });
 
+  const emojiSpan = document.createElement("span");
+  emojiSpan.className = "category-emoji";
+  emojiSpan.textContent = category.emoji;
+  emojiSpan.setAttribute("role", "button");
+  emojiSpan.setAttribute("aria-label", "Change category emoji");
+  emojiSpan.addEventListener("click", (e) => {
+    e.stopPropagation();
+    startCategoryEmojiEdit(category, emojiSpan, main);
+  });
+
   const nameSpan = document.createElement("span");
   nameSpan.className = "category-name";
   nameSpan.textContent = category.name;
@@ -628,7 +746,7 @@ function buildCategoryRow(category) {
   });
 
   actions.append(addSubBtn, editBtn, deleteBtn);
-  main.append(chevron, nameSpan, countSpan, actions);
+  main.append(chevron, emojiSpan, nameSpan, countSpan, actions);
   main.addEventListener("click", () => selectScope({ type: "category", id: category.id }));
 
   wrap.appendChild(main);
@@ -649,6 +767,16 @@ function buildSubcategoryRow(sub) {
   if (ui.scope.type === "subcategory" && ui.scope.id === sub.id) {
     row.classList.add("active");
   }
+
+  const emojiSpan = document.createElement("span");
+  emojiSpan.className = "subcategory-emoji";
+  emojiSpan.textContent = sub.emoji;
+  emojiSpan.setAttribute("role", "button");
+  emojiSpan.setAttribute("aria-label", "Change subcategory emoji");
+  emojiSpan.addEventListener("click", (e) => {
+    e.stopPropagation();
+    startSubcategoryEmojiEdit(sub, emojiSpan, row);
+  });
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "subcategory-name";
@@ -680,7 +808,7 @@ function buildSubcategoryRow(sub) {
   });
 
   actions.append(editBtn, deleteBtn);
-  row.append(nameSpan, countSpan, actions);
+  row.append(emojiSpan, nameSpan, countSpan, actions);
   row.addEventListener("click", () => selectScope({ type: "subcategory", id: sub.id }));
 
   return row;
@@ -756,6 +884,64 @@ function startSubcategoryRename(sub, nameSpan, container) {
     if (e.key === "Enter") input.blur();
     if (e.key === "Escape") {
       input.value = sub.name;
+      input.blur();
+    }
+  });
+  input.addEventListener("blur", commit);
+  input.addEventListener("click", (e) => e.stopPropagation());
+}
+
+function startCategoryEmojiEdit(category, emojiSpan, container) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "inline-edit-input emoji-edit-input";
+  input.value = category.emoji;
+  container.replaceChild(input, emojiSpan);
+  input.focus();
+  input.select();
+
+  const commit = () => {
+    const value = input.value.trim();
+    if (value && value !== category.emoji) {
+      updateCategoryEmoji(category, value);
+    } else {
+      renderSidebar();
+    }
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") input.blur();
+    if (e.key === "Escape") {
+      input.value = category.emoji;
+      input.blur();
+    }
+  });
+  input.addEventListener("blur", commit);
+  input.addEventListener("click", (e) => e.stopPropagation());
+}
+
+function startSubcategoryEmojiEdit(sub, emojiSpan, container) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "inline-edit-input emoji-edit-input";
+  input.value = sub.emoji;
+  container.replaceChild(input, emojiSpan);
+  input.focus();
+  input.select();
+
+  const commit = () => {
+    const value = input.value.trim();
+    if (value && value !== sub.emoji) {
+      updateSubcategoryEmoji(sub, value);
+    } else {
+      renderSidebar();
+    }
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") input.blur();
+    if (e.key === "Escape") {
+      input.value = sub.emoji;
       input.blur();
     }
   });
@@ -931,14 +1117,16 @@ function buildRecipeCard(recipe) {
   const category = getCategory(recipe.categoryId);
   const subcategory = getSubcategory(recipe.subcategoryId);
 
-  node.querySelector(".card-category").textContent = category ? category.name : "Uncategorized";
+  node.querySelector(".card-category").textContent = category
+    ? `${category.emoji} ${category.name}`
+    : "Uncategorized";
   node.querySelector(".card-source").textContent = recipe.sourceType;
   node.querySelector(".card-title").textContent = recipe.title;
   node.querySelector(".card-notes").textContent = recipe.notes || "";
 
   const subEl = node.querySelector(".card-subcategory");
   if (subcategory) {
-    subEl.textContent = subcategory.name;
+    subEl.textContent = `${subcategory.emoji} ${subcategory.name}`;
     subEl.classList.remove("hidden");
   }
 
@@ -975,7 +1163,7 @@ function populateCategorySelect(selectedCategoryId) {
   state.categories.forEach((cat) => {
     const opt = document.createElement("option");
     opt.value = cat.id;
-    opt.textContent = cat.name;
+    opt.textContent = `${cat.emoji} ${cat.name}`;
     els.categoryInput.appendChild(opt);
   });
   els.categoryInput.value = selectedCategoryId || "";
@@ -993,7 +1181,7 @@ function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
   subcategoriesFor(categoryId).forEach((sub) => {
     const opt = document.createElement("option");
     opt.value = sub.id;
-    opt.textContent = sub.name;
+    opt.textContent = `${sub.emoji} ${sub.name}`;
     els.subcategoryInput.appendChild(opt);
   });
   els.subcategoryInput.value = selectedSubcategoryId || "";
