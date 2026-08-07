@@ -376,7 +376,6 @@ function rowToSubcategory(row) {
     id: row.id,
     name: row.name,
     categoryId: row.category_id,
-    emoji: row.emoji || guessEmoji(row.name),
     createdAt: row.created_at,
   };
 }
@@ -415,10 +414,10 @@ async function loadAllData() {
     recipes: (recRes.data || []).map(rowToRecipe),
   };
 
-  backfillMissingEmojis(catRes.data || [], subRes.data || []);
+  backfillMissingEmojis(catRes.data || []);
 }
 
-function backfillMissingEmojis(categoryRows, subcategoryRows) {
+function backfillMissingEmojis(categoryRows) {
   categoryRows
     .filter((row) => !row.emoji)
     .forEach((row) => {
@@ -430,20 +429,6 @@ function backfillMissingEmojis(categoryRows, subcategoryRows) {
         .eq("id", row.id)
         .then(({ error }) => {
           if (error) console.error("Failed to backfill category emoji", error);
-        });
-    });
-
-  subcategoryRows
-    .filter((row) => !row.emoji)
-    .forEach((row) => {
-      const sub = state.subcategories.find((s) => s.id === row.id);
-      if (!sub) return;
-      supabase
-        .from("subcategories")
-        .update({ emoji: sub.emoji })
-        .eq("id", row.id)
-        .then(({ error }) => {
-          if (error) console.error("Failed to backfill subcategory emoji", error);
         });
     });
 }
@@ -512,7 +497,7 @@ async function removeCategory(category) {
 async function createSubcategory(categoryId, name) {
   const { data, error } = await supabase
     .from("subcategories")
-    .insert({ name, category_id: categoryId, emoji: guessEmoji(name), user_id: currentUser.id })
+    .insert({ name, category_id: categoryId, user_id: currentUser.id })
     .select()
     .single();
   if (error) {
@@ -534,14 +519,6 @@ async function renameSubcategory(sub, newName) {
   sub.name = newName;
   renderSidebar();
   renderTopbar();
-}
-
-async function updateSubcategoryEmoji(sub, emoji) {
-  sub.emoji = emoji;
-  renderSidebar();
-
-  const { error } = await supabase.from("subcategories").update({ emoji }).eq("id", sub.id);
-  if (error) showAuthError(error.message);
 }
 
 async function removeSubcategory(sub) {
@@ -840,16 +817,6 @@ function buildSubcategoryRow(sub) {
     row.classList.add("active");
   }
 
-  const emojiSpan = document.createElement("span");
-  emojiSpan.className = "subcategory-emoji";
-  emojiSpan.textContent = sub.emoji;
-  emojiSpan.setAttribute("role", "button");
-  emojiSpan.setAttribute("aria-label", "Change subcategory emoji");
-  emojiSpan.addEventListener("click", (e) => {
-    e.stopPropagation();
-    startSubcategoryEmojiEdit(sub, emojiSpan, row);
-  });
-
   const nameSpan = document.createElement("span");
   nameSpan.className = "subcategory-name";
   nameSpan.textContent = sub.name;
@@ -880,7 +847,7 @@ function buildSubcategoryRow(sub) {
   });
 
   actions.append(editBtn, deleteBtn);
-  row.append(emojiSpan, nameSpan, countSpan, actions);
+  row.append(nameSpan, countSpan, actions);
   row.addEventListener("click", () => selectScope({ type: "subcategory", id: sub.id }));
 
   return row;
@@ -985,35 +952,6 @@ function startCategoryEmojiEdit(category, emojiSpan, container) {
     if (e.key === "Enter") input.blur();
     if (e.key === "Escape") {
       input.value = category.emoji;
-      input.blur();
-    }
-  });
-  input.addEventListener("blur", commit);
-  input.addEventListener("click", (e) => e.stopPropagation());
-}
-
-function startSubcategoryEmojiEdit(sub, emojiSpan, container) {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "inline-edit-input emoji-edit-input";
-  input.value = sub.emoji;
-  container.replaceChild(input, emojiSpan);
-  input.focus();
-  input.select();
-
-  const commit = () => {
-    const value = input.value.trim();
-    if (value && value !== sub.emoji) {
-      updateSubcategoryEmoji(sub, value);
-    } else {
-      renderSidebar();
-    }
-  };
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") input.blur();
-    if (e.key === "Escape") {
-      input.value = sub.emoji;
       input.blur();
     }
   });
@@ -1198,7 +1136,7 @@ function buildRecipeCard(recipe) {
 
   const subEl = node.querySelector(".card-subcategory");
   if (subcategory) {
-    subEl.textContent = `${subcategory.emoji} ${subcategory.name}`;
+    subEl.textContent = subcategory.name;
     subEl.classList.remove("hidden");
   }
 
@@ -1253,7 +1191,7 @@ function populateSubcategorySelect(categoryId, selectedSubcategoryId) {
   subcategoriesFor(categoryId).forEach((sub) => {
     const opt = document.createElement("option");
     opt.value = sub.id;
-    opt.textContent = `${sub.emoji} ${sub.name}`;
+    opt.textContent = sub.name;
     els.subcategoryInput.appendChild(opt);
   });
   els.subcategoryInput.value = selectedSubcategoryId || "";

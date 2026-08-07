@@ -486,8 +486,7 @@ h3 {
   color: var(--accent-strong);
 }
 
-.category-emoji,
-.subcategory-emoji {
+.category-emoji {
   flex-shrink: 0;
   font-size: 1rem;
   line-height: 1;
@@ -495,8 +494,7 @@ h3 {
   border-radius: 6px;
 }
 
-.category-emoji:hover,
-.subcategory-emoji:hover {
+.category-emoji:hover {
   transform: scale(1.15);
 }
 
