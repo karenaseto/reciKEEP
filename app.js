@@ -86,6 +86,10 @@ const els = {
   cancelDialogButton: document.getElementById("cancelDialogButton"),
   saveRecipeButton: document.getElementById("saveRecipeButton"),
   recipeCardTemplate: document.getElementById("recipeCardTemplate"),
+  confirmDialog: document.getElementById("confirmDialog"),
+  confirmDialogMessage: document.getElementById("confirmDialogMessage"),
+  confirmDialogCancel: document.getElementById("confirmDialogCancel"),
+  confirmDialogConfirm: document.getElementById("confirmDialogConfirm"),
 };
 
 let currentUser = null;
@@ -105,6 +109,30 @@ let subcategoryDropdown = null;
 let sourceTypeDropdown = null;
 let sourceFilterDropdown = null;
 let sortDropdown = null;
+
+// ---------- confirm dialog ----------
+
+function showConfirmDialog(message, { confirmLabel = "Delete" } = {}) {
+  return new Promise((resolve) => {
+    els.confirmDialogMessage.textContent = message;
+    els.confirmDialogConfirm.textContent = confirmLabel;
+    els.confirmDialog.showModal();
+
+    const cleanup = (result) => {
+      els.confirmDialog.close();
+      els.confirmDialogConfirm.removeEventListener("click", onConfirm);
+      els.confirmDialogCancel.removeEventListener("click", onCancel);
+      els.confirmDialog.removeEventListener("cancel", onCancel);
+      resolve(result);
+    };
+    const onConfirm = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+
+    els.confirmDialogConfirm.addEventListener("click", onConfirm);
+    els.confirmDialogCancel.addEventListener("click", onCancel);
+    els.confirmDialog.addEventListener("cancel", onCancel);
+  });
+}
 
 // ---------- auth ----------
 
@@ -1036,23 +1064,23 @@ els.addCategoryButton.addEventListener("click", () => {
   input.addEventListener("blur", commit);
 });
 
-function deleteCategory(category) {
+async function deleteCategory(category) {
   const subs = subcategoriesFor(category.id);
   const affected = state.recipes.filter((r) => r.categoryId === category.id).length;
   const warning =
     affected || subs.length
-      ? `"${category.name}" has ${affected} recipe(s) and ${subs.length} subcategory(ies). Deleting it will move those recipes to Uncategorized. Continue?`
-      : `Delete "${category.name}"?`;
-  if (!window.confirm(warning)) return;
+      ? `"${category.name}" has ${affected} recipe(s) and ${subs.length} subcategory(ies). Deleting it will move those recipes to Uncategorized. This can't be undone.`
+      : `Delete "${category.name}"? This can't be undone.`;
+  if (!(await showConfirmDialog(warning))) return;
   removeCategory(category);
 }
 
-function deleteSubcategory(sub) {
+async function deleteSubcategory(sub) {
   const affected = recipeCountForSubcategory(sub.id);
   const warning = affected
-    ? `"${sub.name}" has ${affected} recipe(s). Deleting it will keep those recipes in the main category, just without this subcategory. Continue?`
-    : `Delete "${sub.name}"?`;
-  if (!window.confirm(warning)) return;
+    ? `"${sub.name}" has ${affected} recipe(s). Deleting it will keep those recipes in the main category, just without this subcategory. This can't be undone.`
+    : `Delete "${sub.name}"? This can't be undone.`;
+  if (!(await showConfirmDialog(warning))) return;
   removeSubcategory(sub);
 }
 
@@ -1465,7 +1493,11 @@ els.recipeForm.addEventListener("submit", async (e) => {
 
 els.deleteRecipeButton.addEventListener("click", async () => {
   if (!ui.editingRecipeId) return;
-  if (!window.confirm("Delete this recipe?")) return;
+  const recipe = state.recipes.find((r) => r.id === ui.editingRecipeId);
+  const message = recipe
+    ? `Delete "${recipe.title}"? This can't be undone.`
+    : "Delete this recipe? This can't be undone.";
+  if (!(await showConfirmDialog(message))) return;
   await removeRecipe(ui.editingRecipeId);
   closeRecipeDialog();
   renderAll();

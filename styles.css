@@ -1153,6 +1153,45 @@ button {
   backdrop-filter: blur(3px);
 }
 
+.confirm-dialog {
+  width: min(380px, calc(100% - 1.5rem));
+  border: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: var(--radius-lg);
+}
+
+.confirm-dialog::backdrop {
+  background: rgba(47, 38, 32, 0.35);
+  backdrop-filter: blur(3px);
+}
+
+.confirm-dialog-body {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.6rem;
+}
+
+.confirm-dialog-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.confirm-dialog-message {
+  margin: 0 0 1.3rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
 .recipe-form {
   background: var(--surface);
   border-radius: var(--radius-lg);

@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=12" />
+    <link rel="stylesheet" href="styles.css?v=13" />
   </head>
   <body>
     <div id="authLoading" class="auth-loading">
@@ -342,6 +342,17 @@
       </form>
     </dialog>
 
+    <dialog id="confirmDialog" class="confirm-dialog">
+      <div class="confirm-dialog-body">
+        <p class="confirm-dialog-title">Are you sure?</p>
+        <p id="confirmDialogMessage" class="confirm-dialog-message"></p>
+        <div class="confirm-dialog-actions">
+          <button id="confirmDialogCancel" class="secondary-button" type="button">Cancel</button>
+          <button id="confirmDialogConfirm" class="danger-button" type="button">Delete</button>
+        </div>
+      </div>
+    </dialog>
+
     <template id="recipeCardTemplate">
       <article class="recipe-card">
         <div class="card-image-wrap">
@@ -379,6 +390,6 @@
       </article>
     </template>
 
-    <script type="module" src="app.js?v=22"></script>
+    <script type="module" src="app.js?v=23"></script>
   </body>
 </html>
