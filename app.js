@@ -296,6 +296,25 @@ const EMOJI_KEYWORDS = [
   { keywords: ["egg"], emoji: "🥚" },
   { keywords: ["cheese"], emoji: "🧀" },
   { keywords: ["vegetarian", "vegan", "veggie", "vegetable"], emoji: "🥦" },
+  { keywords: ["apple"], emoji: "🍎" },
+  { keywords: ["banana"], emoji: "🍌" },
+  { keywords: ["orange", "tangerine", "clementine", "mandarin", "citrus"], emoji: "🍊" },
+  { keywords: ["grape"], emoji: "🍇" },
+  { keywords: ["strawberr"], emoji: "🍓" },
+  { keywords: ["blueberr"], emoji: "🫐" },
+  { keywords: ["raspberr", "blackberr", "berry", "berries"], emoji: "🍓" },
+  { keywords: ["watermelon"], emoji: "🍉" },
+  { keywords: ["melon", "cantaloupe", "honeydew"], emoji: "🍈" },
+  { keywords: ["peach"], emoji: "🍑" },
+  { keywords: ["pear"], emoji: "🍐" },
+  { keywords: ["cherry", "cherries"], emoji: "🍒" },
+  { keywords: ["mango"], emoji: "🥭" },
+  { keywords: ["pineapple"], emoji: "🍍" },
+  { keywords: ["kiwi"], emoji: "🥝" },
+  { keywords: ["lemon"], emoji: "🍋" },
+  { keywords: ["lime"], emoji: "🍋" },
+  { keywords: ["coconut"], emoji: "🥥" },
+  { keywords: ["avocado"], emoji: "🥑" },
   { keywords: ["fruit"], emoji: "🍓" },
   { keywords: ["rice"], emoji: "🍚" },
   { keywords: ["snack", "appetizer", "side"], emoji: "🍿" },
@@ -737,9 +756,11 @@ function buildCategoryRow(category) {
 
   const toggleBtn = document.createElement("button");
   toggleBtn.type = "button";
-  toggleBtn.className = "toggle-btn" + (subs.length ? "" : " toggle-empty");
+  toggleBtn.className = "chevron-btn" + (subs.length ? "" : " chevron-empty");
   toggleBtn.setAttribute("aria-label", isExpanded ? "Hide subcategories" : "Show subcategories");
-  toggleBtn.textContent = isExpanded ? "−" : "+";
+  toggleBtn.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>';
+  if (isExpanded) toggleBtn.classList.add("is-expanded");
   toggleBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!subs.length) return;
