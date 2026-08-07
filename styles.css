@@ -522,35 +522,6 @@ h3 {
   font-size: 0.9rem;
 }
 
-.chevron-btn {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  color: var(--muted);
-  border-radius: 6px;
-}
-
-.chevron-btn svg {
-  width: 14px;
-  height: 14px;
-  transition: transform 140ms ease;
-}
-
-.chevron-btn.is-expanded svg {
-  transform: rotate(90deg);
-}
-
-.chevron-empty {
-  visibility: hidden;
-}
-
 .row-actions {
   display: none;
   align-items: center;
@@ -592,8 +563,12 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  padding-left: 1.3rem;
+  padding-left: 1.9rem;
   margin-top: 0.1rem;
+}
+
+.subcategory-list:empty {
+  display: none;
 }
 
 .inline-edit-input {

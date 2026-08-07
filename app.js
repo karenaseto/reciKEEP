@@ -96,7 +96,6 @@ const ui = {
   search: "",
   source: "all",
   sort: "newest",
-  expanded: new Set(),
   editingRecipeId: null,
 };
 
@@ -222,7 +221,6 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     ui.search = "";
     ui.source = "all";
     ui.sort = "newest";
-    ui.expanded = new Set();
     els.searchInput.value = "";
     els.sourceFilter.value = "all";
     if (sourceFilterDropdown) sourceFilterDropdown.render();
@@ -283,6 +281,33 @@ const EMOJI_KEYWORDS = [
   { keywords: ["holiday", "christmas"], emoji: "🎄" },
   { keywords: ["healthy"], emoji: "🥗" },
   { keywords: ["bake", "baking"], emoji: "🧁" },
+  { keywords: ["candy", "lollipop", "gummy", "gummies"], emoji: "🍬" },
+  { keywords: ["salt", "salty"], emoji: "🧂" },
+  { keywords: ["spicy", "hot sauce", "chili pepper"], emoji: "🌶️" },
+  { keywords: ["mint"], emoji: "🌿" },
+  { keywords: ["gluten free", "gluten-free"], emoji: "🌾" },
+  { keywords: ["dairy free", "dairy-free"], emoji: "🥛" },
+  { keywords: ["kid", "kids"], emoji: "🧒" },
+  { keywords: ["party"], emoji: "🎉" },
+  { keywords: ["potato", "fries"], emoji: "🥔" },
+  { keywords: ["dip"], emoji: "🫕" },
+  { keywords: ["sauce", "condiment", "marinade", "dressing"], emoji: "🥫" },
+  { keywords: ["dumpling"], emoji: "🥟" },
+  { keywords: ["bagel"], emoji: "🥯" },
+  { keywords: ["granola", "cereal", "oatmeal"], emoji: "🥣" },
+  { keywords: ["yogurt", "yoghurt"], emoji: "🍦" },
+  { keywords: ["brownie"], emoji: "🍫" },
+  { keywords: ["biscuit", "scone"], emoji: "🥐" },
+  { keywords: ["croissant"], emoji: "🥐" },
+  { keywords: ["casserole", "stuffing", "gravy"], emoji: "🍲" },
+  { keywords: ["stir fry", "stir-fry", "wok"], emoji: "🥘" },
+  { keywords: ["wrap", "pita"], emoji: "🌯" },
+  { keywords: ["popcorn", "pretzel", "chips"], emoji: "🍿" },
+  { keywords: ["jam", "jelly", "preserve", "pickle", "pickling", "canning"], emoji: "🫙" },
+  { keywords: ["instant pot", "slow cooker", "crockpot", "air fryer", "one pot"], emoji: "🍳" },
+  { keywords: ["meal prep", "leftover"], emoji: "🥡" },
+  { keywords: ["spice", "seasoning", "herb"], emoji: "🌿" },
+  { keywords: ["pudding", "custard", "mousse"], emoji: "🍮" },
 ];
 
 function guessEmoji(name) {
@@ -672,28 +697,12 @@ function buildCategoryRow(category) {
   wrap.dataset.categoryId = category.id;
 
   const subs = subcategoriesFor(category.id);
-  const isExpanded = ui.expanded.has(category.id);
 
   const main = document.createElement("div");
   main.className = "category-row-main";
   if (ui.scope.type === "category" && ui.scope.id === category.id) {
     main.classList.add("active");
   }
-
-  const chevron = document.createElement("button");
-  chevron.type = "button";
-  chevron.className = "chevron-btn" + (subs.length ? "" : " chevron-empty");
-  chevron.setAttribute("aria-label", isExpanded ? "Collapse" : "Expand");
-  chevron.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg>';
-  if (isExpanded) chevron.classList.add("is-expanded");
-  chevron.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (!subs.length) return;
-    if (ui.expanded.has(category.id)) ui.expanded.delete(category.id);
-    else ui.expanded.add(category.id);
-    renderSidebar();
-  });
 
   const emojiSpan = document.createElement("span");
   emojiSpan.className = "category-emoji";
@@ -722,8 +731,6 @@ function buildCategoryRow(category) {
   );
   addSubBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    ui.expanded.add(category.id);
-    renderSidebar();
     startInlineSubcategoryCreate(category.id);
   });
 
@@ -746,17 +753,15 @@ function buildCategoryRow(category) {
   });
 
   actions.append(addSubBtn, editBtn, deleteBtn);
-  main.append(chevron, emojiSpan, nameSpan, countSpan, actions);
+  main.append(emojiSpan, nameSpan, countSpan, actions);
   main.addEventListener("click", () => selectScope({ type: "category", id: category.id }));
 
   wrap.appendChild(main);
 
-  if (subs.length && isExpanded) {
-    const list = document.createElement("div");
-    list.className = "subcategory-list";
-    subs.forEach((sub) => list.appendChild(buildSubcategoryRow(sub)));
-    wrap.appendChild(list);
-  }
+  const list = document.createElement("div");
+  list.className = "subcategory-list";
+  subs.forEach((sub) => list.appendChild(buildSubcategoryRow(sub)));
+  wrap.appendChild(list);
 
   return wrap;
 }
