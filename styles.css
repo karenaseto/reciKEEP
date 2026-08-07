@@ -522,6 +522,33 @@ h3 {
   font-size: 0.9rem;
 }
 
+.toggle-btn {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.toggle-btn:hover {
+  background: rgba(198, 95, 69, 0.14);
+  color: var(--accent-strong);
+}
+
+.toggle-empty {
+  visibility: hidden;
+}
+
 .row-actions {
   display: none;
   align-items: center;
